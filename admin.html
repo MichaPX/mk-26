@@ -114,7 +114,7 @@ button{font:inherit;color:inherit}
 .kscroll{display:flex;gap:16px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;padding:12px 0 12px;user-select:none;-webkit-user-select:none;cursor:grab}
 .kscroll.drag{scroll-snap-type:none;cursor:grabbing}
 .kscroll .spacer{flex:0 0 94px}
-.card{flex:0 0 170px;height:241px;scroll-snap-align:center;border-radius:6px;overflow:hidden;box-shadow:0 20px 44px rgba(0,0,0,.55);background:var(--chip);padding:0;border:0;will-change:transform}
+.card{flex:0 0 var(--cw,170px);height:var(--ch,241px);scroll-snap-align:center;border-radius:6px;overflow:hidden;box-shadow:0 20px 44px rgba(0,0,0,.55);background:var(--chip);padding:0;border:0;will-change:transform}
 .card img,.gcover img,.lcover img,.scover img{display:block;width:100%;height:100%;object-fit:cover;pointer-events:none}
 .dots{display:flex;justify-content:center;flex-wrap:wrap;gap:2px;padding:0 24px}
 .dots button{width:18px;height:16px;display:flex;align-items:center;justify-content:center}
@@ -301,7 +301,7 @@ button{font:inherit;color:inherit}
 @keyframes up{from{transform:translateY(100%)}to{transform:none}}
 @keyframes dropin{from{opacity:0;transform:translateY(-8px) scale(.97)}to{opacity:1;transform:none}}
 
-.brandlogo{display:block;max-height:40px;max-width:220px;object-fit:contain;object-position:left center;margin-bottom:2px}
+.brandlogo{display:block;height:40px;width:auto;max-height:40px;max-width:220px;object-fit:contain;object-position:left center;margin-bottom:2px}
 .cats{display:flex;gap:10px;overflow-x:auto;padding:14px 16px 0}
 .cat{position:relative;flex:0 0 108px;height:60px;border-radius:12px;overflow:hidden;background:var(--chip);color:var(--text);transition:box-shadow .2s,transform .2s}
 .cat img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none}
@@ -411,6 +411,7 @@ a.pbtn,a.sbtn{display:flex;align-items:center;justify-content:center;text-decora
 .intro p{margin:0;font-size:15px;line-height:1.55;color:var(--text2);white-space:pre-line}
 .intro .pg{font-size:13px;color:var(--muted)}
 .front .intro img{position:static;inset:auto;width:110px;height:auto;border-radius:4px;box-shadow:0 10px 24px rgba(0,0,0,.35);margin-top:auto}
+.tight .info{gap:3px}.tight .info h2{font-size:22px}.tight .kscroll{padding:6px 0}.tight .info .teaser{-webkit-line-clamp:1}.tight .cta{margin-top:4px}
 .info .teaser{cursor:pointer;margin:0;font-size:13.5px;line-height:1.45;color:var(--text2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;max-width:330px}
 /* ---------- Redaktion ---------- */
 .panel h1{margin:0;font-size:22px;letter-spacing:-.01em}
@@ -1651,8 +1652,7 @@ function setupCarousel() {
   var el = $('#kscroll');
   K.el = el;
   if (!el) return;
-  var spw = Math.max(16, (el.clientWidth - 170) / 2 - 16) + 'px';
-  $$('.spacer', el).forEach(function (x) { x.style.flexBasis = spw; });
+  fitCards(el);
   el.scrollLeft = S.kIndex * STEP;
   updateCards();
   el.addEventListener('scroll', function () {
@@ -1661,6 +1661,41 @@ function setupCarousel() {
   }, { passive: true });
   el.addEventListener('pointerdown', kDown);
 }
+/* Cover-Größe so wählen, dass Banner, Logos und Kauf-Knöpfe immer ganz zu sehen sind */
+function fitCards(el) {
+  var page = $('#kpage'), info = $('#kinfo');
+  if (!el || !page || !info) return;
+  var list = issuesOf(S.magId, S.year);
+  // Höhe der Info für die höchste Ausgabe reservieren, damit beim Wischen nichts springt
+  page.classList.remove('tight');
+  var r = fitCardsOnce(el, page, info, list);
+  if (r < 0) { page.classList.add('tight'); fitCardsOnce(el, page, info, list); }
+}
+function fitCardsOnce(el, page, info, list) {
+  var cur = info.innerHTML, maxH = 0;
+  info.style.minHeight = '';
+  list.forEach(function (it) { info.innerHTML = infoHTML(it); maxH = Math.max(maxH, info.offsetHeight); });
+  info.innerHTML = cur;
+  info.style.minHeight = maxH + 'px';
+  var ch = 241;
+  page.style.setProperty('--ch', ch + 'px'); page.style.setProperty('--cw', '170px');
+  var pr = page.getBoundingClientRect(), ir = info.getBoundingClientRect();
+  var bottom = ir.top - pr.top + page.scrollTop + maxH + 14;
+  var over = bottom - page.clientHeight;
+  var want = ch - over;
+  ch = Math.round(Math.max(120, Math.min(300, want)));
+  var cw = Math.round(ch * 170 / 241);
+  page.style.setProperty('--ch', ch + 'px'); page.style.setProperty('--cw', cw + 'px');
+  STEP = cw + 16;
+  var spw = Math.max(16, (el.clientWidth - cw) / 2 - 16) + 'px';
+  $$('.spacer', el).forEach(function (x) { x.style.flexBasis = spw; });
+  return want - 120;
+}
+var fitT = 0;
+window.addEventListener('resize', function () {
+  clearTimeout(fitT);
+  fitT = setTimeout(function () { if (S.screen === 'kiosk' && K.el && document.body.contains(K.el)) { fitCards(K.el); K.el.scrollLeft = S.kIndex * STEP; updateCards(); } }, 120);
+});
 function updateCards() {
   var el = K.el; if (!el) return;
   var x = el.scrollLeft;
