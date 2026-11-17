@@ -32,6 +32,23 @@ button{font:inherit;color:inherit}
 .adlabel{font-size:10px;font-weight:650;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
 .adslot{border:1px dashed var(--dim);background:repeating-linear-gradient(135deg,var(--stripe1) 0 10px,var(--stripe2) 10px 20px)}
 .banner{margin:8px 16px 0;display:flex;flex-direction:column;gap:4px}
+.bslides{position:relative;height:var(--bh,120px);border-radius:12px;overflow:hidden;background:var(--chip)}
+.btrack{display:flex;height:100%;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.btrack::-webkit-scrollbar{display:none}
+.bslide{flex:0 0 100%;height:100%;scroll-snap-align:center;scroll-snap-stop:always;padding:0;border:0;background:none;cursor:pointer;display:block}
+.bslide img,.bslide video{display:block;width:100%;height:100%;object-fit:cover;object-position:center;pointer-events:none}
+.bdots{position:absolute;left:0;right:0;bottom:6px;display:flex;justify-content:center;gap:5px;pointer-events:none}
+.bdots span{width:6px;height:6px;border-radius:3px;background:rgba(255,255,255,.55);box-shadow:0 0 0 1px rgba(0,0,0,.15);transition:width .25s,background .25s}
+.bdots span.on{width:16px;background:#fff}
+.slist{display:flex;flex-direction:column;gap:8px;margin:8px 0}
+.sitem{display:flex;gap:10px;align-items:center;padding:8px;border:1px solid #E4E2DC;border-radius:10px;background:#FAFAF8}
+.sitem .sth{flex:0 0 96px;width:96px;height:54px;border-radius:6px;overflow:hidden;background:#E9E7E1;position:relative}
+.sitem .sth img,.sitem .sth video{width:100%;height:100%;object-fit:cover;display:block}
+.sitem .sth .vt{position:absolute;left:4px;bottom:4px;font-size:9px;font-weight:800;letter-spacing:.06em;padding:1px 5px;border-radius:4px;background:rgba(0,0,0,.65);color:#fff}
+.sitem .sf{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.sitem .sf input{height:32px;font-size:12.5px}
+.sitem .sb{display:flex;flex-direction:column;gap:4px}
+.sitem .sb button{height:26px;min-width:30px;padding:0 8px;font-size:12px}
 .banner .adslot{height:var(--bh,120px);border-radius:10px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;color:var(--text2)}
 .chips{display:flex;gap:8px;overflow-x:auto;align-items:center;padding:12px 16px 4px}
 .btile{flex:0 0 auto;height:40px;padding:0 4px;border-radius:0;border:0;cursor:pointer;display:flex;align-items:center;justify-content:center;background:none;box-shadow:none;opacity:.45;filter:saturate(.7);transition:opacity .2s,filter .2s,transform .2s}
@@ -515,6 +532,7 @@ var PDF_WORKER_B64 = "LyoqCiAqIEBsaWNzdGFydCBUaGUgZm9sbG93aW5nIGlzIHRoZSBlbnRpcm
 /* ================= Grundlagen ================= */
 var MONTHS = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
 var STEP = 186;
+var APP_BUILD = '17.11.2026 14:52';
 var ZOOM = 1;
 var NOW = new Date();
 var app = document.getElementById('app');
@@ -624,7 +642,7 @@ function fileURL(v) {
   return '';
 }
 function pageURL(issue, n) { return storageURL('pages/' + issue.id + '/' + pad3(n) + '.jpg') + '?v=' + (issue.added || 0); }
-var EXT = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/svg+xml': 'svg', 'image/webp': 'webp', 'application/json': 'json' };
+var EXT = { 'video/mp4': 'mp4', 'video/quicktime': 'mov', 'video/webm': 'webm', 'image/gif': 'gif', 'image/png': 'png', 'image/jpeg': 'jpg', 'image/svg+xml': 'svg', 'image/webp': 'webp', 'application/json': 'json' };
 function safeSeg(x) { return String(x).replace(/[^A-Za-z0-9_-]/g, '_'); }
 async function upload(path, blob, type) {
   await sbFetch('/storage/v1/object/' + BUCKET + '/' + path, { method: 'POST', headers: { 'Content-Type': type || blob.type || 'application/octet-stream', 'x-upsert': 'true', 'cache-control': /\.json$/.test(path) ? '60' : '31536000' }, body: blob });
@@ -701,10 +719,10 @@ var S = {
   cat: 'all', catImg: {}, catRec: {},
   magId: null, year: null, view: 'swipe', kIndex: 0,
   screen: 'kiosk', back: 'kiosk', anim: false,
-  sheet: null, sheetIssue: null, news: [], newsOpen: false, newsArt: null, newsScroll: 0, plan: 'single', menu: false, toast: null,
+  sheet: null, sheetIssue: null, slides: [], bIndex: 0, news: [], newsOpen: false, newsArt: null, newsScroll: 0, plan: 'single', menu: false, toast: null,
   owned: [], subs: [], flat: false, saved: [], subPlan: {}, subSince: {}, flatSince: 0, loggedIn: false,
   settings: { push: true, wifi: true, auto: false },
-  cfg: { bannerH: 120, ads: true, abos: true, accent: '#FF7A45', bg: '#121214', bgLight: '#F6F4EF', look: 'system', magAccent: false, flat: '9,99 € / Monat', adAfter: 8, mail: 'support@beispiel.de', phone: '', hours: 'Mo–Fr, 9–17 Uhr', helpUrl: '' }
+  cfg: { bannerH: 120, bannerSec: 6, ads: true, abos: true, accent: '#FF7A45', bg: '#121214', bgLight: '#F6F4EF', look: 'system', magAccent: false, flat: '9,99 € / Monat', adAfter: 8, mail: 'support@beispiel.de', phone: '', hours: 'Mo–Fr, 9–17 Uhr', helpUrl: '' }
 };
 function publicId() {
   var id = null;
@@ -723,7 +741,7 @@ function loadPrefs() {
     ['owned', 'subs', 'flat', 'saved', 'subPlan', 'subSince', 'flatSince', 'loggedIn', 'settings', 'cfg'].forEach(function (k) { if (p[k] !== undefined) S[k] = k === 'cfg' ? Object.assign(S.cfg, p.cfg) : p[k]; });
   } catch (e) {}
 }
-var SERVER_KEYS = ['ads', 'bannerH', 'adAfter', 'accent', 'bg', 'bgLight', 'look', 'magAccent', 'flat', 'mail', 'phone', 'hours', 'helpUrl', 'bot', 'botName', 'botHello', 'abos'];
+var SERVER_KEYS = ['ads', 'bannerH', 'bannerSec', 'adAfter', 'accent', 'bg', 'bgLight', 'look', 'magAccent', 'flat', 'mail', 'phone', 'hours', 'helpUrl', 'bot', 'botName', 'botHello', 'abos'];
 var LASTCFG = '', cfgTimer = 0;
 function serverCfg() { var o = {}; SERVER_KEYS.forEach(function (k) { if (S.cfg[k] !== undefined) o[k] = S.cfg[k]; }); return o; }
 function pushServerCfg() {
@@ -885,6 +903,11 @@ async function loadData() {
     if (n.img) n.imgURL = fileURL(n.img);
     return n;
   }).sort(function (a, b) { return String(b.date || '').localeCompare(String(a.date || '')) || (b.created || 0) - (a.created || 0); });
+  S.slides = Object.keys(ADS).filter(function (k) { return k.indexOf('bslide:') === 0; }).map(function (k) {
+    var b = Object.assign({}, ADS[k], { key: k });
+    if (b.media) b.mediaURL = fileURL(b.media);
+    return b;
+  }).filter(function (b) { return b.mediaURL; }).sort(function (a, b) { return (a.order || 0) - (b.order || 0) || (a.created || 0) - (b.created || 0); });
   for (var ak of ['banner', 'native', 'page', 'brand']) {
     var ad = ADS[ak] || {};
     S.ads[ak] = ad;
@@ -1008,7 +1031,7 @@ function render() {
   S.anim = false;
   if ($('#kpage') && S.keepPageScroll) $('#kpage').scrollTop = keepScroll;
   S.keepPageScroll = false;
-  if (S.screen === 'kiosk') { setupCarousel(); if (S.chat) bindChat(); }
+  if (S.screen === 'kiosk') { setupCarousel(); setupBanner(); if (S.chat) bindChat(); } else clearTimeout(BR.t);
   var nl = $('.nlist'); if (nl) { if (S.newsScroll) nl.scrollTop = S.newsScroll; nl.addEventListener('scroll', function () { S.newsScroll = nl.scrollTop; }, { passive: true }); }
   if (S.screen === 'reader') setupBook();
   if (S.screen === 'lesen') setupLM();
@@ -1019,9 +1042,69 @@ function adBanner() {
   if (!S.cfg.ads) return '';
   var a = S.ads.banner || {};
   var bh = '--bh:' + (S.cfg.bannerH || 120) + 'px';
-  if (S.adImg.banner) return '<div class="banner" style="' + bh + '"><div class="adlabel">Anzeige</div><button class="adimg" data-act="adlink" data-arg="banner" aria-label="' + esc(a.title || 'Anzeige öffnen') + '"><img src="' + S.adImg.banner + '" alt=""></button></div>';
+  var sl = bannerSlides();
+  if (sl.length) {
+    S.bIndex = Math.min(S.bIndex, sl.length - 1);
+    return '<div class="banner" style="' + bh + '"><div class="adlabel">Anzeige</div><div class="bslides" id="bslides"><div class="btrack noscroll" id="btrack">' + sl.map(function (b, i) {
+      var media = b.kind === 'video'
+        ? '<video src="' + esc(b.mediaURL) + '" muted playsinline webkit-playsinline preload="' + (i === S.bIndex ? 'auto' : 'metadata') + '"' + (sl.length === 1 ? ' loop autoplay' : '') + '></video>'
+        : '<img src="' + esc(b.mediaURL) + '" alt="" draggable="false">';
+      return '<button class="bslide" data-act="slidelink" data-arg="' + esc(b.key) + '" aria-label="Anzeige ' + (i + 1) + ' von ' + sl.length + '">' + media + '</button>';
+    }).join('') + '</div>' + (sl.length > 1 ? '<div class="bdots" id="bdots">' + sl.map(function (b, i) { return '<span' + (i === S.bIndex ? ' class="on"' : '') + '></span>'; }).join('') + '</div>' : '') + '</div></div>';
+  }
   return '<div class="banner" style="' + bh + '"><div class="adlabel">Anzeige</div><div class="adslot">' + ICON.ad + 'Banner-Werbefläche</div></div>';
 }
+function bannerSlides() {
+  if (S.slides.length) return S.slides;
+  if (S.adImg.banner) return [{ key: 'banner', kind: 'image', mediaURL: S.adImg.banner, url: (S.ads.banner || {}).url }];
+  return [];
+}
+/* Banner-Rotation */
+var BR = { t: 0, el: null, n: 0, paused: false, rt: 0 };
+function setupBanner() {
+  clearTimeout(BR.t);
+  var tr = $('#btrack'); BR.el = tr;
+  if (!tr) return;
+  var sl = bannerSlides(); BR.n = sl.length;
+  tr.scrollLeft = S.bIndex * tr.clientWidth;
+  var showDots = function () { $$('#bdots span').forEach(function (d, i) { d.classList.toggle('on', i === S.bIndex); }); };
+  var playCur = function () {
+    $$('video', tr).forEach(function (v, i) {
+      if (i === S.bIndex) { try { v.currentTime = 0; } catch (e) {} var pr = v.play(); if (pr && pr.catch) pr.catch(function () {}); }
+      else { try { v.pause(); } catch (e) {} }
+    });
+  };
+  var schedule = function () {
+    clearTimeout(BR.t);
+    if (BR.n < 2 || BR.paused) return;
+    var cur = sl[S.bIndex], v = cur && cur.kind === 'video' ? tr.children[S.bIndex].querySelector('video') : null;
+    var secs = Math.max(2, Number(S.cfg.bannerSec) || 6);
+    if (v) {
+      v.onended = function () { next(); };
+      var d = isFinite(v.duration) && v.duration > 0 ? v.duration : 30;
+      BR.t = setTimeout(next, Math.min(60, d + 1) * 1000);   // Sicherheitsnetz, falls "ended" nicht kommt
+    } else BR.t = setTimeout(next, secs * 1000);
+  };
+  var next = function () {
+    if (!BR.el || !document.body.contains(tr)) return;
+    S.bIndex = (S.bIndex + 1) % BR.n;
+    tr.scrollTo({ left: S.bIndex * tr.clientWidth, behavior: 'smooth' });
+  };
+  tr.addEventListener('scroll', function () {
+    clearTimeout(BR.rt);
+    BR.rt = setTimeout(function () {
+      var i = Math.round(tr.scrollLeft / Math.max(1, tr.clientWidth));
+      i = Math.max(0, Math.min(BR.n - 1, i));
+      if (i !== S.bIndex || !tr.dataset.started) { S.bIndex = i; tr.dataset.started = '1'; showDots(); playCur(); }
+      schedule();
+    }, 140);
+  }, { passive: true });
+  tr.addEventListener('pointerdown', function () { BR.paused = true; clearTimeout(BR.t); }, { passive: true });
+  tr.addEventListener('pointerup', function () { BR.paused = false; schedule(); }, { passive: true });
+  tr.addEventListener('pointercancel', function () { BR.paused = false; schedule(); }, { passive: true });
+  tr.dataset.started = '1'; showDots(); playCur(); schedule();
+}
+document.addEventListener('visibilitychange', function () { if (document.hidden) clearTimeout(BR.t); else if (S.screen === 'kiosk') setupBanner(); });
 function adNative() {
   if (!S.cfg.ads) return '<div style="height:28px"></div>';
   var a = S.ads.native || {};
@@ -1222,7 +1305,7 @@ function menuHTML() {
     h += '<button class="bare mi plain" role="menuitem" data-act="link" data-arg="' + esc(l) + '"><span>' + esc(l) + '</span>' + ICON.ext + '</button>';
   });
   if (S.loggedIn) h += '<button class="bare mi logout" role="menuitem" data-act="logout" style="margin-top:6px">Abmelden</button>';
-  h += '<div class="ver">Version 1.0 · Präsentation</div></div></div>';
+  h += '<div class="ver">Version ' + APP_BUILD + '</div></div></div>';
   return h;
 }
 
@@ -1653,6 +1736,7 @@ function setupCarousel() {
   K.el = el;
   if (!el) return;
   fitCards(el);
+  watchFit(el);
   el.scrollLeft = S.kIndex * STEP;
   updateCards();
   el.addEventListener('scroll', function () {
@@ -1680,7 +1764,7 @@ function fitCardsOnce(el, page, info, list) {
   var ch = 241;
   page.style.setProperty('--ch', ch + 'px'); page.style.setProperty('--cw', '170px');
   var pr = page.getBoundingClientRect(), ir = info.getBoundingClientRect();
-  var bottom = ir.top - pr.top + page.scrollTop + maxH + 14;
+  var bottom = ir.top - pr.top + page.scrollTop + maxH + 18;
   var over = bottom - page.clientHeight;
   var want = ch - over;
   ch = Math.round(Math.max(120, Math.min(300, want)));
@@ -1691,11 +1775,32 @@ function fitCardsOnce(el, page, info, list) {
   $$('.spacer', el).forEach(function (x) { x.style.flexBasis = spw; });
   return want - 120;
 }
-var fitT = 0;
-window.addEventListener('resize', function () {
+var fitT = 0, fitRO = null, fitLast = '';
+function refit() {
   clearTimeout(fitT);
-  fitT = setTimeout(function () { if (S.screen === 'kiosk' && K.el && document.body.contains(K.el)) { fitCards(K.el); K.el.scrollLeft = S.kIndex * STEP; updateCards(); } }, 120);
-});
+  fitT = setTimeout(function () {
+    if (S.screen !== 'kiosk' || !K.el || !document.body.contains(K.el)) return;
+    fitCards(K.el); K.el.scrollLeft = S.kIndex * STEP; updateCards();
+  }, 60);
+}
+/* Nach dem Start ändern sich in der App noch Höhen (Safe Area, Statusleiste, Schrift, Bilder) – dann neu anpassen */
+function watchFit(el) {
+  var page = $('#kpage'); if (!page) return;
+  if (window.ResizeObserver) {
+    if (fitRO) fitRO.disconnect();
+    fitRO = new ResizeObserver(function () {
+      var k = page.clientHeight + 'x' + page.clientWidth;
+      if (k !== fitLast) { fitLast = k; refit(); }
+    });
+    fitLast = page.clientHeight + 'x' + page.clientWidth;
+    fitRO.observe(page);
+  }
+  $$('#kpage img').forEach(function (im) { if (!im.complete && !im.closest('.card')) im.addEventListener('load', refit, { once: true }); });
+}
+window.addEventListener('resize', refit);
+window.addEventListener('orientationchange', refit);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(refit);
+setTimeout(refit, 400); setTimeout(refit, 1200);
 function updateCards() {
   var el = K.el; if (!el) return;
   var x = el.scrollLeft;
@@ -2329,6 +2434,12 @@ var ACT = {
     try { navigator.clipboard.writeText(id).then(done, function () { toast('Public ID: ' + id); }); } catch (e) { toast('Public ID: ' + id); }
   },
   openurl: function (u) { if (!/^https?:\/\//i.test(u)) u = 'https://' + u; openExternal(u); },
+  slidelink: function (k) {
+    var b = bannerSlides().filter(function (x) { return x.key === k; })[0];
+    var u = b && b.url;
+    if (u) { if (!/^https?:\/\//i.test(u)) u = 'https://' + u; openExternal(u); }
+    else toast('Für diese Anzeige ist kein Link hinterlegt');
+  },
   adlink: function (k) {
     var u = (S.ads[k] || {}).url;
     if (u) { if (!/^https?:\/\//i.test(u)) u = 'https://' + u; openExternal(u); }
@@ -2491,8 +2602,17 @@ function renderPanel() {
   var ad = function (k) { return S.ads[k] || {}; };
   h += '<div class="psec"><h2>Werbung</h2>' +
     '<label class="ck">Werbeflächen anzeigen<input type="checkbox" id="cAds"' + (S.cfg.ads ? ' checked' : '') + '></label>' +
-    '<div class="adblock"><b>Banner oben im Kiosk</b>' + '<div class="pf"><label for="cBh">Höhe des Banners</label><select id="cBh">' + [[70, 'Klein (wie 320 × 50)'], [120, 'Mittel (wie 320 × 100)'], [170, 'Groß (wie 300 × 150)']].map(function (o) { return '<option value="' + o[0] + '"' + ((S.cfg.bannerH || 120) === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></div><div class="help">Das Bild füllt die Fläche aus, die Mitte bleibt sichtbar. Am besten passend anlegen: Klein 1200 × 230, Mittel 1200 × 400, Groß 1200 × 560.</div>' + '' + imgPick('banner', S.adImg.banner || '', 'wide') +
-    '<div class="pf"><label>Link beim Antippen</label><input type="url" data-ad="banner" data-k="url" placeholder="https://…" value="' + esc(ad('banner').url || '') + '"></div></div>' +
+    '<div class="adblock"><b>Banner oben im Kiosk</b>' +
+    '<div class="prow"><div class="pf"><label for="cBh">Höhe des Banners</label><select id="cBh">' + [[70, 'Klein (wie 320 × 50)'], [120, 'Mittel (wie 320 × 100)'], [170, 'Groß (wie 300 × 150)']].map(function (o) { return '<option value="' + o[0] + '"' + ((S.cfg.bannerH || 120) === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></div>' +
+    '<div class="pf"><label for="cBsec">Bild wechselt alle</label><select id="cBsec">' + [4, 6, 8, 12].map(function (n) { return '<option value="' + n + '"' + ((Number(S.cfg.bannerSec) || 6) === n ? ' selected' : '') + '>' + n + ' Sekunden</option>'; }).join('') + '</select></div></div>' +
+    '<div class="help">Mehrere Bilder und Videos wechseln automatisch und lassen sich wischen. Videos laufen ohne Ton und wechseln, wenn sie zu Ende sind. Bildgrößen: Klein 1200 × 230, Mittel 1200 × 400, Groß 1200 × 560. Videos als MP4, höchstens 30 MB, am besten unter 15 Sekunden.</div>' +
+    '<div class="slist">' + bannerSlides().map(function (b, i, arr) {
+      var k = esc(b.key);
+      return '<div class="sitem"><div class="sth">' + (b.kind === 'video' ? '<video src="' + esc(b.mediaURL) + '" muted playsinline preload="metadata"></video><span class="vt">VIDEO</span>' : '<img src="' + esc(b.mediaURL) + '" alt="">') + '</div>' +
+        '<div class="sf"><b style="font-size:12px">' + (i + 1) + '. ' + (b.kind === 'video' ? 'Video' : 'Bild') + '</b><input type="url" placeholder="Link beim Antippen (optional)" data-slide="' + k + '" value="' + esc(b.url || '') + '"></div>' +
+        '<div class="sb"><button class="ghost" data-smove="' + k + '" data-dir="-1"' + (i === 0 ? ' disabled' : '') + ' aria-label="Nach vorne">↑</button><button class="ghost" data-smove="' + k + '" data-dir="1"' + (i === arr.length - 1 ? ' disabled' : '') + ' aria-label="Nach hinten">↓</button><button class="ghost red" data-sdel="' + k + '" aria-label="Entfernen">✕</button></div></div>';
+    }).join('') + '</div>' +
+    '<div class="prow2"><label class="ghost">+ Bild<input type="file" accept="image/*" hidden id="sAddImg" multiple></label><label class="ghost">+ Video<input type="file" accept="video/mp4,video/quicktime,video/webm" hidden id="sAddVid"></label><span id="sBusy" style="font-size:12px;color:#6B6B73"></span></div></div>' +
     '<div class="adblock"><b>Anzeige im Kiosk-Feed</b>' + imgPick('native', S.adImg.native || '') +
     '<div class="pf"><label>Titel</label><input type="text" data-ad="native" data-k="title" value="' + esc(ad('native').title || '') + '"></div>' +
     '<div class="pf"><label>Text</label><input type="text" data-ad="native" data-k="text" value="' + esc(ad('native').text || '') + '"></div>' +
@@ -2613,6 +2733,69 @@ function bindPanel() {
       await saveAd(id, { img: null });
     });
   });
+  /* Banner-Slides */
+  var cBsec = $('#cBsec', panel);
+  if (cBsec) cBsec.addEventListener('change', function () { S.cfg.bannerSec = Number(cBsec.value); savePrefs(); });
+  async function migrateLegacyBanner() {
+    if (S.slides.length || !(S.ads.banner && S.ads.banner.img)) return 0;
+    await DB.put('ads', { media: S.ads.banner.img, kind: 'image', url: S.ads.banner.url || undefined, order: 0, created: Date.now() }, 'bslide:' + Date.now().toString(36) + 'a');
+    var nb = Object.assign({}, S.ads.banner); delete nb.id; delete nb.img; await DB.put('ads', nb, 'banner');
+    return 1;
+  }
+  async function addSlides(files, kind) {
+    var busy = $('#sBusy', panel);
+    try {
+      var base = (await migrateLegacyBanner()) + bannerSlides().length;
+      var n = 0;
+      for (var f of files) {
+        var blob;
+        if (kind === 'video') {
+          if (f.size > 30 * 1024 * 1024) { alert('Das Video ist ' + Math.round(f.size / 1048576) + ' MB groß. Bitte höchstens 30 MB (kürzer oder stärker komprimiert).'); continue; }
+          blob = f.type ? f : new Blob([f], { type: 'video/mp4' });
+        } else blob = await resizeImage(f, 1600, 'image/jpeg');
+        busy.textContent = 'Lade hoch … ' + (kind === 'video' ? Math.round(f.size / 1048576) + ' MB' : '');
+        await DB.put('ads', { media: blob, kind: kind, order: base + n, created: Date.now() }, 'bslide:' + Date.now().toString(36) + n);
+        n++;
+      }
+      busy.textContent = '';
+      await loadData(); S.bIndex = Math.max(0, bannerSlides().length - 1); rerender(); renderPanel();
+    } catch (err) { busy.textContent = ''; alert(err.message || 'Hochladen fehlgeschlagen.'); }
+  }
+  var sAddImg = $('#sAddImg', panel), sAddVid = $('#sAddVid', panel);
+  if (sAddImg) sAddImg.addEventListener('change', function () { addSlides(Array.from(sAddImg.files), 'image'); });
+  if (sAddVid) sAddVid.addEventListener('change', function () { addSlides(Array.from(sAddVid.files), 'video'); });
+  $$('[data-slide]', panel).forEach(function (inp) {
+    inp.addEventListener('change', async function () {
+      var k = inp.getAttribute('data-slide'), v = inp.value.trim() || null;
+      if (k === 'banner') { await saveAd('banner', { url: v }); return; }
+      var b = S.slides.filter(function (x) { return x.key === k; })[0]; if (!b) return;
+      var d = Object.assign({}, b); ['id', 'key', 'mediaURL'].forEach(function (x) { delete d[x]; }); if (v) d.url = v; else delete d.url;
+      await DB.put('ads', d, k); await loadData(); rerender(); renderPanel();
+    });
+  });
+  $$('[data-smove]', panel).forEach(function (btn) {
+    btn.addEventListener('click', async function () {
+      if (await migrateLegacyBanner()) await loadData();
+      var arr = S.slides.slice(), k = btn.getAttribute('data-smove'), i = arr.findIndex(function (x) { return x.key === k; }), j = i + Number(btn.getAttribute('data-dir'));
+      if (i < 0 || j < 0 || j >= arr.length) return;
+      var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+      for (var n = 0; n < arr.length; n++) { var d = Object.assign({}, arr[n]); ['id', 'key', 'mediaURL'].forEach(function (x) { delete d[x]; }); d.order = n; await DB.put('ads', d, arr[n].key); }
+      await loadData(); rerender(); renderPanel();
+    });
+  });
+  $$('[data-sdel]', panel).forEach(function (btn) {
+    btn.addEventListener('click', async function () {
+      var k = btn.getAttribute('data-sdel');
+      if (!confirm('Dieses Banner-Motiv entfernen?')) return;
+      try {
+        if (k === 'banner') { await saveAd('banner', { img: null }); return; }
+        var b = S.slides.filter(function (x) { return x.key === k; })[0];
+        if (b && b.media && b.media.$file) await removeFiles([b.media.$file]).catch(function () {});
+        await DB.del('ads', k); S.bIndex = 0; await loadData(); rerender(); renderPanel();
+      } catch (err) { alert(err.message); }
+    });
+  });
+
   /* News */
   var nNew = $('#nNew', panel);
   if (nNew) nNew.addEventListener('click', async function () {
