@@ -237,8 +237,8 @@ body.full input,body.full textarea,body.full select{font-size:16px!important}
 .lovl.on{pointer-events:auto}
 
 .l3d{position:absolute;inset:0;perspective:1100px;pointer-events:none}
-.lmag{position:absolute;left:0;top:0;transform-style:preserve-3d;transform-origin:0 50%;will-change:transform;backface-visibility:hidden}
-.lmag .lit{position:absolute;inset:0;border-radius:inherit;background:#000;opacity:var(--lit,0);pointer-events:none;z-index:2}
+.lmag{position:absolute;left:0;top:0;transform-style:preserve-3d;-webkit-transform-style:preserve-3d;transform-origin:0 50%;will-change:transform}
+.lmag .lit{position:absolute;inset:0;border-radius:inherit;background:#000;opacity:0;pointer-events:none;z-index:2}
 .lmag .f{position:absolute;backface-visibility:hidden;-webkit-backface-visibility:hidden}
 .lmag .front{inset:0;background-size:cover;background-position:center;border-radius:2px 5px 5px 2px;box-shadow:0 10px 24px rgba(0,0,0,.35);transition:box-shadow .4s}
 .lmag.rest .front{box-shadow:0 26px 50px rgba(0,0,0,.45)}
@@ -706,7 +706,7 @@ var PDF_WORKER_B64 = "LyoqCiAqIEBsaWNzdGFydCBUaGUgZm9sbG93aW5nIGlzIHRoZSBlbnRpcm
 /* ================= Grundlagen ================= */
 var MONTHS = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
 var STEP = 186;
-var APP_BUILD = '19.11.2026 10:40';
+var APP_BUILD = '19.11.2026 11:10';
 var ZOOM = 1;
 var NOW = new Date();
 var app = document.getElementById('app');
@@ -1260,6 +1260,7 @@ function setupBanner() {
   tr.scrollLeft = S.bIndex * tr.clientWidth;
   var showDots = function () { $$('#bdots span').forEach(function (d, i) { d.classList.toggle('on', i === S.bIndex); }); };
   // Video-Elemente überleben Neuaufbauten der Seite: kein Neuladen, kein Neustart bei jedem Antippen
+  Object.keys(VCACHE).forEach(function (k) { if (!sl.some(function (b) { return b.key === k; })) { try { VCACHE[k].pause(); VCACHE[k].removeAttribute('src'); VCACHE[k].load(); } catch (e) {} delete VCACHE[k]; } });
   $$('.bvid', tr).forEach(function (ph) { var v = bannerVideo(ph.getAttribute('data-vkey'), ph.getAttribute('data-src'), sl.length === 1); ph.appendChild(v); });
   var lastIdx = BR.playIdx;
   var playCur = function (restart) {
@@ -1606,7 +1607,7 @@ function bindShelf() {
     var sy = 0, sx = 0, drag = false, armed = false, lock = false, moved = 0, pid = null, holdT = 0;
     var reset = function (anim) { drag = false; armed = false; clearTimeout(holdT); el.style.transition = anim ? 'transform .3s cubic-bezier(.3,1.4,.5,1)' : ''; el.style.transform = ''; };
     el.addEventListener('pointerdown', function (e) {
-      if (LP) return;
+      if (lpAlive()) return;
       sy = e.clientY; sx = e.clientX; drag = true; armed = e.pointerType === 'mouse'; moved = 0; pid = e.pointerId;
       clearTimeout(holdT);
       if (!armed) holdT = setTimeout(function () {
@@ -1640,6 +1641,8 @@ function bindShelf() {
       reset(true);
     });
     el.addEventListener('pointercancel', function () { reset(true); });
+    // Rückfall: Wenn iOS die Zeiger-Ereignisse abbricht, kommt trotzdem ein Klick an
+    el.addEventListener('click', function () { if (Date.now() - LPLAST > 500 && !lpAlive()) { reset(false); pullOut(el, false); } });
   });
 }
 function libDetailHTML(it) {
@@ -1660,31 +1663,56 @@ function libDetailHTML(it) {
 /* Herausziehen – eine durchgehende Bewegung: erst ein Stück aus dem Regal, dann im Bogen nach vorn, dabei aufs Cover drehen */
 function lpEase(t) { return t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
 function lpSmooth(a, b, t) { t = Math.max(0, Math.min(1, (t - a) / (b - a))); return t * t * (3 - 2 * t); }
-function lpFrame(t) {
-  var o = LP; if (!o || !o.mag) return;
-  var lift = lpSmooth(0, .32, t) * o.pull;                       // Stück nach oben aus dem Regal
-  var v = lpEase(Math.max(0, Math.min(1, (t - .16) / .84)));     // Flug nach vorn
-  // Drehpunkt ist der Heftrücken selbst – so liegt er bei 90° genau dort, wo er im Regal stand
+function lpState(t) {
+  var o = LP;
+  var lift = lpSmooth(0, .32, t) * o.pull;
+  var v = lpEase(Math.max(0, Math.min(1, (t - .16) / .84)));
   var x0 = o.cx, y0 = o.cy - lift, x1 = o.tx - o.W / 2, y1 = o.ty;
-  var qx = x0 + (x1 - x0) * .15, qy = Math.min(y0, y1) - 70;     // Bogen nach oben
+  var qx = x0 + (x1 - x0) * .15, qy = Math.min(y0, y1) - 70;
   var iv = 1 - v, x = iv * iv * x0 + 2 * iv * v * qx + v * v * x1, y = iv * iv * y0 + 2 * iv * v * qy + v * v * y1;
   var s = o.s0 + (1 - o.s0) * v, ry = 90 * (1 - v), rz = -5 * Math.sin(Math.PI * v);
-  o.mag.style.transform = 'translate3d(' + x.toFixed(2) + 'px,' + (y - o.H / 2).toFixed(2) + 'px,0) scale(' + s.toFixed(4) + ') rotateY(' + ry.toFixed(2) + 'deg) rotateZ(' + rz.toFixed(2) + 'deg)';
-  o.mag.style.setProperty('--lit', (ry / 90 * .55).toFixed(3));
-  if (o.scrim) o.scrim.style.opacity = String(Math.min(1, v * 1.3));
+  return {
+    tf: 'translate3d(' + x.toFixed(2) + 'px,' + (y - o.H / 2).toFixed(2) + 'px,0) scale(' + s.toFixed(4) + ') rotateY(' + ry.toFixed(2) + 'deg) rotateZ(' + rz.toFixed(2) + 'deg)',
+    op: Math.min(1, v * 1.3), lit: ry / 90 * .55
+  };
 }
+function lpFrame(t) {
+  var o = LP; if (!o || !o.mag) return;
+  var st = lpState(t);
+  o.mag.style.transform = st.tf;
+  if (o.lit) o.lit.style.opacity = st.lit.toFixed(3);
+  if (o.scrim) o.scrim.style.opacity = String(st.op);
+}
+/* Die Bewegung läuft als Web-Animation (auf dem Grafikchip) – unabhängig davon, ob das Programm gerade beschäftigt ist */
 function lpRun(from, to, dur, done) {
   var o = LP; if (!o) return;
-  cancelAnimationFrame(o.raf);
-  var t0 = performance.now();
-  (function step(now) {
-    var k = Math.min(1, (now - t0) / dur), t = from + (to - from) * k;
-    o.t = t; lpFrame(t);
-    if (k < 1) o.raf = requestAnimationFrame(step); else if (done) done();
-  })(t0);
+  lpStop();
+  var N = 36, kf = [], ks = [], kl = [];
+  for (var i = 0; i <= N; i++) { var st = lpState(from + (to - from) * i / N); kf.push({ transform: st.tf }); ks.push({ opacity: st.op }); kl.push({ opacity: st.lit }); }
+  o.run = { from: from, to: to, dur: dur, t0: performance.now() };
+  if (!o.mag.animate) { lpFrame(to); o.t = to; if (done) done(); return; }
+  var opt = { duration: dur, easing: 'linear', fill: 'forwards' };
+  o.anims = [o.mag.animate(kf, opt), o.scrim.animate(ks, opt)];
+  if (o.lit) o.anims.push(o.lit.animate(kl, opt));
+  var fin = false;
+  o.anims[0].onfinish = function () { if (fin) return; fin = true; o.t = to; lpFrame(to); lpStop(); if (done) done(); };
+  o.endT = setTimeout(function () { if (!fin && o.anims) o.anims[0].onfinish(); }, dur + 400);
 }
+function lpNow() { var o = LP; if (!o || !o.run) return o ? o.t : 0; var k = Math.min(1, (performance.now() - o.run.t0) / o.run.dur); return o.run.from + (o.run.to - o.run.from) * k; }
+function lpStop() { var o = LP; if (!o) return; clearTimeout(o.endT); if (o.anims) { o.anims.forEach(function (a) { try { a.cancel(); } catch (e) {} }); o.anims = null; } }
+function lpAlive() {
+  // Hängengebliebenen Zustand erkennen (Overlay fehlt, Animation steht) und aufräumen
+  if (LP && (!document.body.contains(LP.mag) || (LP.started && Date.now() - LP.started > 4000 && !LP.closing && !$('#ldet.show')))) {
+    var ov = $('#lovl'); if (ov) ov.remove();
+    if (LP.el) { LP.el.classList.remove('gone'); LP.el.style.transform = ''; }
+    lpStop(); LP = null;
+  }
+  return !!LP;
+}
+var LPLAST = 0;
 function pullOut(el, dragged) {
-  if (LP) return;
+  if (lpAlive()) return;
+  LPLAST = Date.now();
   var it = issueById(el.getAttribute('data-spine')); if (!it) return;
   var sr = app.getBoundingClientRect(), z = sr.width / app.offsetWidth || 1;
   // aktuelle Lage des Rückens (inkl. schon gezogenem Stück) messen, dann zurück auf Ruhelage rechnen
@@ -1693,21 +1721,25 @@ function pullOut(el, dragged) {
   var sw = cur.width / z, sh = cur.height / z, cx = (cur.left - sr.left) / z + sw / 2, cy = (cur.top - sr.top) / z + sh / 2 + dragUp;
   var ar = it.aspect || 1.33, W = Math.min(app.offsetWidth * 0.48, 200), H = W * ar, D = Math.max(sw, 10);
   var c = spineCol(it);
-  var ov = document.createElement('div'); ov.className = 'lovl on'; ov.id = 'lovl';
+  var ov = document.createElement('div'); ov.className = 'lovl on'; ov.id = 'lovl'; ov.style.pointerEvents = 'none';
+  setTimeout(function () { ov.style.pointerEvents = ''; }, 550);
   ov.innerHTML = '<div class="lscrim" data-act="putback" style="opacity:0"></div><div class="l3d" id="l3d"><div class="lmag" id="lmag" style="width:' + W + 'px;height:' + H + 'px">' +
     '<div class="f front" style="background-image:url(\'' + cover(it) + '\');transform:translateZ(' + (D / 2) + 'px)"><i class="lit"></i></div>' +
     '<div class="f" style="left:' + ((W - D) / 2) + 'px;top:0;width:' + D + 'px;height:' + H + 'px;transform:rotateY(-90deg) translateZ(' + (W / 2) + 'px)"><div class="lsp" style="position:absolute;inset:0;width:100%;height:100%;border-radius:0;box-shadow:none;transition:none;--sw:' + D + 'px;--sh:' + H + 'px;--sc:' + c.bg + ';--ink:' + c.ink + '">' + spineHTML(it) + '</div></div>' +
     '<div class="f edge" style="left:' + ((W - D) / 2) + 'px;top:0;width:' + D + 'px;height:' + H + 'px;transform:rotateY(90deg) translateZ(' + (W / 2) + 'px)"></div>' +
     '<div class="f back" style="transform:rotateY(180deg) translateZ(' + (D / 2) + 'px)"></div></div></div><div class="ldet" id="ldet" role="dialog" aria-label="' + esc(label(it)) + '"></div>';
   app.appendChild(ov);
-  LP = { el: el, it: it, mag: $('#lmag'), scrim: $('.lscrim', ov), W: W, H: H, s0: sh / H, cx: cx, cy: cy, pull: sh * .55,
-    tx: app.offsetWidth / 2, ty: 64 + H / 2 + 8, t: 0 };
+  LP = { el: el, it: it, mag: $('#lmag'), scrim: $('.lscrim', ov), lit: $('#lmag .lit'), W: W, H: H, s0: sh / H, cx: cx, cy: cy, pull: sh * .55,
+    tx: app.offsetWidth / 2, ty: 64 + H / 2 + 8, t: 0, started: Date.now() };
   var startT = dragged ? Math.min(.3, .32 * Math.min(1, dragUp / LP.pull)) : 0;
   lpFrame(startT);
   el.classList.add('gone'); el.style.transition = 'none'; el.style.transform = '';
   var shown = false;
-  lpRun(startT, 1, dragged ? 640 : 760, function () { if (LP) LP.mag.classList.add('rest'); });
-  setTimeout(function () { if (!LP || shown) return; shown = true; var d = $('#ldet'); d.innerHTML = libDetailHTML(it); requestAnimationFrame(function () { d.classList.add('show'); }); }, dragged ? 360 : 440);
+  lpRun(startT, 1, dragged ? 640 : 760, function () { if (LP && LP.mag) LP.mag.classList.add('rest'); });
+  var showCard = function () { if (!LP || shown) return; shown = true; var d = $('#ldet'); if (!d) return; d.innerHTML = libDetailHTML(it); requestAnimationFrame(function () { d.classList.add('show'); }); setTimeout(function () { d.classList.add('show'); }, 120); };
+  setTimeout(showCard, dragged ? 360 : 440);
+  // Sicherheitsnetz: falls der Bildlauf der Animation stockt (z. B. iOS pausiert sie), Endzustand erzwingen
+  setTimeout(function () { if (LP && !LP.closing && LP.t < 1) { lpStop(); LP.t = 1; lpFrame(1); LP.mag.classList.add('rest'); } showCard(); }, 1300);
 }
 function putBack(after) {
   if (!LP || LP.closing) return;
@@ -1725,9 +1757,12 @@ function putBack(after) {
   // Zielposition neu messen (falls die Seite inzwischen gescrollt wurde)
   var sr = app.getBoundingClientRect(), z = sr.width / app.offsetWidth || 1, r = o.el.getBoundingClientRect();
   o.cx = (r.left - sr.left) / z + r.width / z / 2; o.cy = (r.top - sr.top) / z + r.height / z / 2;
-  lpRun(o.t || 1, 0, 620, finish);
+  var fin = false, once = function () { if (fin) return; fin = true; finish(); };
+  var tNow = lpNow(); lpFrame(tNow);
+  lpRun(tNow || 1, 0, Math.max(300, 620 * (tNow || 1)), once);
+  setTimeout(function () { if (!fin) { lpStop(); once(); } }, 1300);
 }
-function closeLibPull() { var ov = $('#lovl'); if (ov) ov.remove(); if (LP) { cancelAnimationFrame(LP.raf); if (LP.el) LP.el.classList.remove('gone'); } LP = null; }
+function closeLibPull() { var ov = $('#lovl'); if (ov) ov.remove(); if (LP) { lpStop(); if (LP.el) LP.el.classList.remove('gone'); } LP = null; }
 function libraryHTML() {
   var lib = S.issues.filter(inLib).sort(function (a, b) { return b.year - a.year || b.month - a.month; });
   var h = '<div class="page noscroll" id="kpage" style="animation:fade .25s ease">';
@@ -3006,7 +3041,7 @@ var ACT = {
     var st = shelfSt(), a = (st.as[id] || []).slice(); if (a.indexOf(c.id) < 0) a.push(c.id); st.as[id] = a;
     savePrefs(); refreshLibOrg(id); if (S.sheet === 'lib') S.libDirty = true; ltoast('Fach „' + c.name + '“ angelegt');
   },
-  putback: function () { putBack(); },
+  putback: function () { if (LP && Date.now() - LP.started < 600) return; putBack(); },   // der Klick des Antippens selbst darf das Heft nicht gleich zurückstellen
   libopen: function (what) {
     if (!LP) return;
     var id = LP.it.id;
