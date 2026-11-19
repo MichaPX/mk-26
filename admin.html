@@ -724,7 +724,7 @@ var PDF_WORKER_B64 = "LyoqCiAqIEBsaWNzdGFydCBUaGUgZm9sbG93aW5nIGlzIHRoZSBlbnRpcm
 /* ================= Grundlagen ================= */
 var MONTHS = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
 var STEP = 186;
-var APP_BUILD = '19.11.2026 13:06';
+var APP_BUILD = '19.11.2026 13:16';
 var ZOOM = 1;
 var NOW = new Date();
 var app = document.getElementById('app');
@@ -2579,6 +2579,16 @@ function openAllPages() {
   var on = $('.pgi.on', g); if (on) g.scrollTop = Math.max(0, on.offsetTop - g.clientHeight / 2 + on.offsetHeight / 2);
 }
 function closeAllPages() { var p = $('#pall'); if (PGIO) PGIO.disconnect(); if (p) p.remove(); }
+/* Die Markierung gehört zu genau einer Seite: beim Blättern ausblenden, auf der Seite wieder zeigen */
+function syncTextMark() {
+  var hl = $('#thl'); if (!hl || !R) return;
+  if (!TC) { hl.style.display = 'none'; return; }
+  var r = R.leaves[R.cur], l = R.spread ? R.leaves[R.cur - 1] : null;
+  var onPage = (r && r.type === 'img' && r.n === TC.page && !(TC.off < 0)) || (l && l.type === 'img' && l.n === TC.page && TC.off < 0);
+  hl.style.display = onPage && !R.turn ? 'block' : 'none';
+  // Wer weiterblättert, liest dort weiter: großes Textfeld schließen, laufendes Vorlesen darf als Leiste bleiben
+  if (!onPage && !R.turn && !TC.speaking && !TC.ttsPaused) hideTextCard();
+}
 function goLeaf(i) {
   if (!R || R.anim || R.drag) return;
   i = Math.max(0, Math.min(R.leaves.length - 1, i));
@@ -2685,6 +2695,7 @@ function updateBook() {
     leaf.style.clipPath = (i === turnIdx && geo) ? polyCSS(geo.front) : 'none';
   });
   syncRibbon();
+  syncTextMark();
   var flapw = $('#flapw'), flap = $('#flap'), ush = $('#ushadow');
   if (geo) {
     var nx = geo.n[0], ny = geo.n[1], k = geo.M[0] * nx + geo.M[1] * ny;
