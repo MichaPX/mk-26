@@ -291,6 +291,24 @@ body.full input,body.full textarea,body.full select{font-size:16px!important}
 .thl{position:absolute;z-index:40;display:none;border-radius:4px;background:color-mix(in srgb,var(--accent) 22%,transparent);box-shadow:0 0 0 2px var(--accent);pointer-events:none;transition:all .25s}
 .tcard{position:absolute;left:8px;right:8px;bottom:8px;z-index:60;max-height:58%;display:flex;flex-direction:column;background:var(--surf);color:var(--text);border-radius:20px;box-shadow:0 -10px 40px rgba(0,0,0,.45);border:1px solid var(--line)}
 .tcard.in{animation:up .3s cubic-bezier(.2,.8,.2,1)}
+/* Milchglas: Farben der Seite schimmern durch, Text bleibt lesbar */
+@supports ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){
+  .tcard{background:color-mix(in srgb,var(--surf) 74%,transparent);-webkit-backdrop-filter:blur(20px) saturate(1.5);backdrop-filter:blur(20px) saturate(1.5);border-color:color-mix(in srgb,var(--text) 12%,transparent)}
+  .tcard .tcb,.tcard .tcx{background:color-mix(in srgb,var(--chip2) 70%,transparent)}
+  .tcard .tcbar{border-top-color:color-mix(in srgb,var(--text) 10%,transparent)}
+}
+/* Beim Vorlesen: schmale Leiste, die Seite bleibt frei */
+.tcard.mini{max-height:none;border-radius:18px;padding:8px 8px 8px 14px;flex-direction:row;align-items:center;gap:10px;animation:none;transition:none}
+.tcard.mini .tcsent{flex:1;min-width:0;cursor:pointer;font-family:Georgia,"Iowan Old Style",serif;font-size:15px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tcard.mini .tcsent small{display:block;font-family:inherit;font-size:11px;font-weight:650;letter-spacing:.02em;color:var(--muted);font-family:-apple-system,system-ui,sans-serif;margin-bottom:1px}
+.tcard.mini .tcb{height:40px;min-width:40px;border-radius:20px}
+.tcard.mini .tcb.pri{background:var(--accent);color:var(--onaccent)}
+.tcard .tcmore{width:34px;height:34px;border-radius:17px;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.tcard.grow{animation:tcgrow .28s cubic-bezier(.2,.8,.2,1)}
+.tcard.shrink{animation:tcgrow .28s cubic-bezier(.2,.8,.2,1)}
+@keyframes tcgrow{from{opacity:.4;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
+.thl.live{animation:thlpulse 2.2s ease-in-out infinite}
+@keyframes thlpulse{0%,100%{box-shadow:0 0 0 2px var(--accent)}50%{box-shadow:0 0 0 4px var(--accent),0 0 18px color-mix(in srgb,var(--accent) 50%,transparent)}}
 .tchead{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 4px 18px;font-size:12px;font-weight:650;color:var(--muted);letter-spacing:.02em}
 .tcx{width:34px;height:34px;border-radius:17px;background:var(--chip2);color:var(--text);display:flex;align-items:center;justify-content:center}
 .tctext{flex:1;overflow-y:auto;padding:4px 18px 14px;font-family:Georgia,"Iowan Old Style",serif;line-height:1.65}
@@ -703,7 +721,7 @@ body.full .sheet{padding-bottom:calc(28px + env(safe-area-inset-bottom))}
 /* ================= Grundlagen ================= */
 var MONTHS = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
 var STEP = 186;
-var APP_BUILD = '19.11.2026 11:10';
+var APP_BUILD = '19.11.2026 13:06';
 var ZOOM = 1;
 var NOW = new Date();
 var app = document.getElementById('app');
@@ -735,6 +753,7 @@ function wollySVG(full) {
     head + '</svg>';
 }
 var ICON = {
+  chevDown: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>',
   up: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M6 11l6-6 6 6"/></svg>',
   mark: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M6 3h12v18l-6-4.5L6 21z"/></svg>',
   markOn: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M6 3h12v18l-6-4.5L6 21z"/></svg>',
@@ -2785,7 +2804,9 @@ function showTextCard(page, k, off) {
   var rec = R.txt, paras = rec.pages[page - 1] || [], box = rec.boxes[page - 1][k];
   if (!paras[k]) return;
   off = off != null ? off : (TC && TC.page === page ? TC.off || 0 : 0);
-  TC = { page: page, k: k, off: off, speaking: TC && TC.page === page && TC.k === k ? TC.speaking : false };
+  var same = TC && TC.page === page && TC.k === k, prev = TC && TC.page === page ? TC : null;
+  TC = { page: page, k: k, off: off, speaking: same ? TC.speaking : false, ttsPaused: same ? TC.ttsPaused : false,
+    expanded: prev ? prev.expanded : true, sent: same ? TC.sent : '' };
   var book = $('#book'), hl = $('#thl');
   if (!hl) { hl = document.createElement('div'); hl.id = 'thl'; hl.className = 'thl'; book.appendChild(hl); }
   hl.style.left = ((box[0] + off) * 100 - 0.8) + '%'; hl.style.top = (box[2] * 100 - 0.6) + '%';
@@ -2794,7 +2815,20 @@ function showTextCard(page, k, off) {
   var card = $('#tcard');
   if (!card) { card = document.createElement('div'); card.id = 'tcard'; card.className = 'tcard'; card.setAttribute('role', 'dialog'); card.setAttribute('aria-label', 'Text lesen'); $('.reader').appendChild(card); card.classList.add('in'); }
   var speaking = TC.speaking;
-  card.innerHTML = '<div class="tchead"><span>Seite ' + page + ' · Absatz ' + (k + 1) + ' von ' + paras.length + '</span><button class="btn tcx" data-act="tcclose" aria-label="Schließen">' + ICON.close + '</button></div>' +
+  hl.classList.toggle('live', !!speaking);
+  var wasMini = card.classList.contains('mini'), mini = !!(speaking || TC.ttsPaused) && !TC.expanded;
+  card.classList.toggle('mini', mini);
+  if (wasMini !== mini && !card.classList.contains('in')) { card.classList.remove('grow'); void card.offsetWidth; card.classList.add('grow'); }
+  if (mini) {
+    card.setAttribute('aria-label', 'Vorlesen');
+    card.innerHTML = '<div class="tcsent" id="tcsent" data-act="tcexpand" role="button" aria-label="Text groß anzeigen"><small>Seite ' + page + ' · Absatz ' + (k + 1) + ' von ' + paras.length + '</small><span id="tcsentt">' + esc(TC.sent || paras[k]) + '</span></div>' +
+      '<button class="btn tcb pri" data-act="tcspeak" aria-label="' + (speaking ? 'Pause' : 'Weiter vorlesen') + '">' + (speaking ? ICON.pause : ICON.play) + '</button>' +
+      '<button class="btn tcb" data-act="tcnav" data-arg="1" aria-label="Nächster Absatz"' + (k < paras.length - 1 ? '' : ' disabled') + '>' + ICON.next + '</button>' +
+      '<button class="btn tcb" data-act="tcclose" aria-label="Vorlesen beenden">' + ICON.close + '</button>';
+    return;
+  }
+  card.setAttribute('aria-label', 'Text lesen');
+  card.innerHTML = '<div class="tchead"><span>Seite ' + page + ' · Absatz ' + (k + 1) + ' von ' + paras.length + '</span>' + (speaking || TC.ttsPaused ? '<button class="btn tcmore" data-act="tcexpand" aria-label="Einklappen">' + ICON.chevDown + '</button>' : '') + '<button class="btn tcx" data-act="tcclose" aria-label="Schließen">' + ICON.close + '</button></div>' +
     '<div class="tctext" style="font-size:' + (S.cfg.lmSize || 18) + 'px">' + esc(paras[k]) + '</div>' +
     '<div class="tcbar"><button class="btn tcb" data-act="tcnav" data-arg="-1" aria-label="Vorheriger Absatz"' + (k > 0 ? '' : ' disabled') + '>' + ICON.prev + '</button>' +
     '<button class="btn tcb wide" data-act="tcspeak" aria-label="Vorlesen">' + (speaking ? ICON.pause : ICON.play) + '<span>' + (speaking ? 'Pause' : 'Vorlesen') + '</span></button>' +
@@ -2809,17 +2843,20 @@ function hideTextCard() {
 }
 function speakCard() {
   if (!TC || !ttsAvailable()) { toast('Vorlesen ist auf diesem Gerät nicht verfügbar'); return; }
-  if (TC.speaking) { TTSRUN++; ttsCancel(); TC.speaking = false; showTextCard(TC.page, TC.k); return; }
+  if (TC.speaking) { TTSRUN++; ttsCancel(); TC.speaking = false; TC.ttsPaused = true; showTextCard(TC.page, TC.k); return; }
   var paras = R.txt.pages[TC.page - 1], run = ++TTSRUN;
-  TC.speaking = true; showTextCard(TC.page, TC.k);
+  if (!TC.ttsPaused) TC.expanded = false;   // beim Start einklappen, damit die Seite frei ist
+  TC.speaking = true; TC.ttsPaused = false; showTextCard(TC.page, TC.k);
   var chunks = ttsChunks(paras[TC.k]), i = 0, voice = ttsVoice();
   ttsCancel();
   (function next() {
     if (run !== TTSRUN || !TC) return;
     if (i >= chunks.length) {
-      if (TC.k < paras.length - 1) { TC.k++; TC.speaking = true; showTextCard(TC.page, TC.k); chunks = ttsChunks(paras[TC.k]); i = 0; }
-      else { TC.speaking = false; showTextCard(TC.page, TC.k); return; }
+      if (TC.k < paras.length - 1) { TC.k++; TC.speaking = true; TC.sent = ''; showTextCard(TC.page, TC.k); chunks = ttsChunks(paras[TC.k]); i = 0; }
+      else { TC.speaking = false; TC.ttsPaused = false; TC.expanded = true; TC.sent = ''; showTextCard(TC.page, TC.k); return; }
     }
+    TC.sent = chunks[i];
+    var st = $('#tcsentt'); if (st) st.textContent = chunks[i];
     saySpeak(chunks[i++], voice, function () { if (run === TTSRUN) next(); });
   })();
 }
@@ -3133,8 +3170,9 @@ var ACT = {
   closereader: function () { closeReader(); },
   zoom: function () { if (R) { hideTextCard(); setZoom(!R.zoom); } },
   tcclose: function () { hideTextCard(); },
-  tcnav: function (d) { if (TC) { var sp = TC.speaking; if (sp) { TTSRUN++; ttsCancel(); TC.speaking = false; } var n = R.txt.pages[TC.page - 1].length; showTextCard(TC.page, Math.max(0, Math.min(n - 1, TC.k + Number(d)))); var hl = $('#thl'); } },
+  tcnav: function (d) { if (TC) { var sp = TC.speaking; if (sp) { TTSRUN++; ttsCancel(); TC.speaking = false; } var n = R.txt.pages[TC.page - 1].length; showTextCard(TC.page, Math.max(0, Math.min(n - 1, TC.k + Number(d)))); if (sp) speakCard(); } },
   tcspeak: function () { speakCard(); },
+  tcexpand: function () { if (!TC) return; TC.expanded = !TC.expanded; showTextCard(TC.page, TC.k, TC.off); },
   tclm: function () { if (!TC || !R) return; var f = { page: TC.page, k: TC.k }, id = R.it.id, pv = R.preview; hideTextCard(); openLM(id, pv, false, f); },
   goleaf: function (i) { goLeaf(Number(i)); },
   allpages: function () { openAllPages(); },
