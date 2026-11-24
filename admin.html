@@ -343,6 +343,9 @@ body.full #app.scrolled::before{content:"";position:absolute;left:0;right:0;top:
 .kseg{display:inline-flex;margin-left:auto;background:#EEEEF1;border-radius:8px;padding:2px;gap:2px;flex:none;order:9}
 .kseg button{border:0;background:none;font:600 11.5px system-ui,-apple-system,sans-serif;color:#55555D;padding:4px 9px;border-radius:6px;cursor:pointer;height:auto;width:auto}
 .bookl .bk{border:1px solid #E4E3DF;border-radius:12px;padding:10px 12px 4px;margin-bottom:10px;background:#fff}
+.updtab{margin-top:10px}.updrow{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid #EEEDEA;font-size:13px}
+.updrow .fn{flex:0 0 34%;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}.updrow select{flex:0 0 34%;min-width:0}
+.updrow .st{flex:1;color:#6B6B73}.updrow .st.ok{color:#1E6B3A}.updrow .st.err{color:#B42318}
 .tocrow{display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid #EEEDEA}
 .tocrow img{width:32px;height:44px;object-fit:cover;border-radius:3px;background:#EEE;flex:none}
 .tocrow>input{flex:1;min-width:0}
@@ -2528,6 +2531,18 @@ function tocParseLine(t, maxP) {
   return { t: title, printed: n };
 }
 /* Seiten mit gedruckten Seitenzahlen finden (klassisch oder Magazin-Layout) */
+function tocSplitPara(t, b, maxP) {
+  var tok = String(t || '').replace(/\s+/g, ' ').trim().split(' '), isN = function (w) { return /^\d{1,3}$/.test(w) && +w >= 1 && +w <= maxP + 40; };
+  var after = [], before = [], buf = [], cur = null;
+  tok.forEach(function (w) { if (isN(w) && buf.length) { after.push({ t: buf.join(' '), printed: +w }); buf = []; } else buf.push(w); });
+  tok.forEach(function (w) { if (isN(w)) { if (cur && cur.w.length) before.push({ printed: cur.n, t: cur.w.join(' ') }); cur = { n: +w, w: [] }; } else if (cur) cur.w.push(w); });
+  if (cur && cur.w.length) before.push({ printed: cur.n, t: cur.w.join(' ') });
+  var clean = function (arr) { return arr.map(function (e) { return { t: e.t.replace(/[\s.·…_–—-]+$/, '').replace(/^[\s.·…_–—|:-]+/, '').trim(), printed: e.printed }; }).filter(function (e) { return e.t.replace(/[^A-Za-zÄÖÜäöüß]/g, '').length >= 3 && e.t.length <= 160; }); };
+  after = clean(after); before = clean(before);
+  var res = after.length >= before.length ? after : before;
+  if (res.length < 2) return null;
+  return res.map(function (e, i) { var h = b ? (b[3] - b[2]) / res.length : 0; return { t: e.t, printed: e.printed, b: b ? [b[0], b[1], r3(b[2] + h * i), r3(b[2] + h * (i + 1))] : null }; });
+}
 function tocDetect(rec, N) {
   if (!rec) return null;
   var pages = textPages(rec) || [], boxes = rec.boxes || [], lines = rec.lines || [], found = [];
@@ -2535,9 +2550,12 @@ function tocDetect(rec, N) {
     var L = (lines[pg - 1] && lines[pg - 1].length) ? lines[pg - 1] : (pages[pg - 1] || []).map(function (t, i) { return { t: t, b: (boxes[pg - 1] || [])[i] || null }; });
     if (!L.length) continue;
     var ent = [], used = {};
+    var fromParas = !(lines[pg - 1] && lines[pg - 1].length);
     L.forEach(function (l, i) {
       var e = tocParseLine(l.t, N);
-      if (e) { ent.push({ t: e.t, printed: e.printed, src: l.b ? { pg: pg, b: l.b } : null }); used[i] = 1; }
+      if (e) { ent.push({ t: e.t, printed: e.printed, src: l.b ? { pg: pg, b: l.b } : null }); used[i] = 1; return; }
+      var sp = fromParas && String(l.t).length > 30 ? tocSplitPara(l.t, l.b, N) : null;   // mehrere Einträge in einem Absatz
+      if (sp) { sp.forEach(function (x) { ent.push({ t: x.t, printed: x.printed, src: x.b ? { pg: pg, b: x.b } : null }); }); used[i] = 1; }
     });
     // Magazin-Layout: Seitenzahl allein, Titel daneben oder darunter
     L.forEach(function (l, i) {
@@ -2754,6 +2772,124 @@ function openTocSheet() {
   var o = $('.rtoci.on', d); if (o) o.scrollIntoView({ block: 'center' });
 }
 
+/* ----- Bestehende Ausgaben nachrüsten (ohne neu hochzuladen) ----- */
+/* Original-Datei nur lesen: Text, Inhaltsverzeichnis, Lesezeichen, Verweise – Seiten, Cover, Preise bleiben unverändert */
+async function refreshFromFile(it, file, onStep) {
+  var isEpub = /\.epub$/i.test(file.name) || file.type === 'application/epub+zip';
+  var buf = await file.arrayBuffer(), N = it.pageCount, texts, extra = null, warn = '';
+  if (isEpub) {
+    onStep && onStep('E-Book wird gelesen …');
+    var d = await openUploadDoc(buf, true);
+    if (d.numPages !== it.pageCount) warn = 'Seitenzahl weicht ab (' + d.numPages + ' statt ' + it.pageCount + ') – bitte Sprungziele prüfen';
+    texts = await d.texts(N); try { extra = d.toc ? await d.toc(N) : null; } catch (e) {}
+    await d.destroy();
+  } else {
+    var pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    if (pdf.numPages < it.pageCount) warn = 'PDF hat weniger Seiten (' + pdf.numPages + ' statt ' + it.pageCount + ') – richtige Datei?';
+    N = Math.min(N, pdf.numPages);
+    texts = await extractTexts(pdf, N, function (p) { onStep && onStep('Seite ' + p + ' von ' + N + ' …'); });
+    onStep && onStep('Inhaltsverzeichnis wird gesucht …');
+    try { extra = await pdfTocExtra(pdf, N); } catch (e) {}
+    await pdf.destroy();
+  }
+  var tp = textPages(texts) || [];
+  if (tp.some(function (a) { return a && a.length; })) await DB.put('texts', texts, it.id);
+  var old = null; try { old = await DB.get('texts', 'toc-' + it.id); } catch (e) {}
+  var tr = tocBuild(texts, N, extra), keep = !!(old && old.edited);
+  if (tr && !keep) await DB.put('texts', tr, 'toc-' + it.id);
+  return { n: tr ? tr.entries.length : 0, hot: tr ? tr.entries.filter(function (e) { return e.src; }).length + tr.links.length : 0, keep: keep, found: !!tr, warn: warn };
+}
+async function makeThumbs(it, onStep) {
+  for (var n = 1; n <= it.pageCount; n++) {
+    onStep && onStep(n);
+    var res = await fetch(pageURL(it, n)); if (!res.ok) throw new Error('Seite ' + n + ' nicht gefunden');
+    var bmp = await createImageBitmap(await res.blob());
+    var c = document.createElement('canvas'); c.width = 160; c.height = Math.round(160 * bmp.height / bmp.width);
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height); if (bmp.close) bmp.close();
+    await DB.put('pages', await new Promise(function (r) { c.toBlob(r, 'image/jpeg', 0.75); }), it.id + ':t' + pad3(n));
+  }
+  it.thumbs = 1; await DB.put('issues', it);
+}
+function issueName(it) { var m = magById(it.magId) || {}; return m.kind === 'book' ? label(it) : (m.name || '') + ' · ' + label(it); }
+/* Datei → passende Ausgabe (über Dateiname: Titel, Monat, Jahr) */
+function matchIssue(f) {
+  var g = guessFromName(f.name.replace(/\.epub$/i, '')) || {}, nm = slug(f.name.replace(/\.(pdf|epub)$/i, '')), isEpub = /\.epub$/i.test(f.name);
+  var c = S.issues.map(function (it) {
+    var m = magById(it.magId) || {}, s = 0;
+    if (m.kind === 'book') { var t = slug(it.title || ''); if (t && t !== 'magazin' && nm.indexOf(t) >= 0) s = 10; }
+    else {
+      var mn = slug(m.name);
+      if (mn && (nm.indexOf(mn) >= 0 || (g.title && slug(g.title) === mn))) {
+        s = 5; if (g.year && g.year === it.year) s += 2; if (g.month && g.month === it.month) s += 2;
+        if (g.month && g.month !== it.month) s -= 3;
+      }
+    }
+    if (s && isEpub !== (m.kind === 'book' || m.kind === 'comic')) s -= 1;
+    return { id: it.id, s: s };
+  }).filter(function (x) { return x.s > 0; }).sort(function (a, b) { return b.s - a.s; });
+  return c[0] && (!c[1] || c[1].s < c[0].s) ? c[0].id : '';
+}
+var UPDF = [];
+function updMatchRender() {
+  var box = $('#updMatch', panel); if (!box) return;
+  if (!UPDF.length) { box.innerHTML = ''; return; }
+  var opts = function (sel) {
+    var K = { mag: 'Zeitschriften', comic: 'Comics', book: 'Bücher' };
+    return '<option value="">– nicht zuordnen –</option>' + ['mag', 'comic', 'book'].map(function (k) {
+      var its = S.issues.filter(function (it) { return ((magById(it.magId) || {}).kind || 'mag') === k; }).sort(function (a, b) { return issueName(a).localeCompare(issueName(b), 'de'); });
+      return its.length ? '<optgroup label="' + K[k] + '">' + its.map(function (it) { return '<option value="' + esc(it.id) + '"' + (it.id === sel ? ' selected' : '') + '>' + esc(issueName(it)) + '</option>'; }).join('') + '</optgroup>' : '';
+    }).join('');
+  };
+  var n = UPDF.filter(function (u) { return u.id; }).length;
+  box.innerHTML = '<div class="updtab">' + UPDF.map(function (u, i) {
+    return '<div class="updrow"><span class="fn" title="' + esc(u.f.name) + '">' + esc(u.f.name) + '</span><select data-updsel="' + i + '"' + (u.done ? ' disabled' : '') + '>' + opts(u.id) + '</select><span class="st' + (u.err ? ' err' : u.done ? ' ok' : '') + '">' + esc(u.st || (u.id ? (u.auto ? 'automatisch zugeordnet' : '') : 'bitte zuordnen')) + '</span></div>';
+  }).join('') + '</div><button class="go small" id="updGo"' + (n ? '' : ' disabled') + '>' + n + (n === 1 ? ' Ausgabe' : ' Ausgaben') + ' nachrüsten</button>';
+  $$('[data-updsel]', box).forEach(function (s) { s.addEventListener('change', function () { var u = UPDF[+s.getAttribute('data-updsel')]; u.id = s.value; u.auto = false; updMatchRender(); }); });
+  var go = $('#updGo', box); if (go) go.addEventListener('click', async function () {
+    go.disabled = true; $$('[data-updsel]', box).forEach(function (s) { s.disabled = true; });
+    for (var u of UPDF) {
+      if (!u.id || u.done) continue;
+      var it = issueById(u.id); if (!it) continue;
+      var stEl = function () { return $$('.updrow .st', box)[UPDF.indexOf(u)]; };
+      try {
+        var r = await refreshFromFile(it, u.f, function (t) { var e = stEl(); if (e) e.textContent = t; });
+        u.done = true;
+        u.st = (r.keep ? 'Text aktualisiert · Inhalt von Hand bearbeitet, bleibt' : r.found ? 'Inhalt: ' + r.n + ' Einträge' + (r.hot ? ' · ' + r.hot + ' antippbare Stellen' : '') : 'Text aktualisiert · kein Inhaltsverzeichnis gefunden') + (r.warn ? ' · ⚠ ' + r.warn : '');
+      } catch (e) { u.err = true; u.st = 'Fehler: ' + (e.message || e); }
+      var e2 = stEl(); if (e2) { e2.textContent = u.st; e2.className = 'st' + (u.err ? ' err' : ' ok'); }
+    }
+    go.textContent = 'Fertig'; toast('Ausgaben nachgerüstet');
+  });
+}
+async function updAllRun(btn) {
+  var log = $('#updLog', panel), thumbs = $('#updThumbs', panel).checked, redo = $('#updRedo', panel).checked, its = S.issues.slice();
+  btn.disabled = true; log.innerHTML = '';
+  var cnt = { toc: 0, th: 0, none: 0 };
+  for (var k = 0; k < its.length; k++) {
+    var it = its[k], msgs = [];
+    btn.textContent = (k + 1) + ' / ' + its.length + ' …';
+    try {
+      var old = null; try { old = await DB.get('texts', 'toc-' + it.id); } catch (e) {}
+      if (old && old.edited) msgs.push('Inhalt von Hand bearbeitet – bleibt');
+      else if (old && (old.entries || []).length && !redo) msgs.push('Inhalt schon da (' + old.entries.length + ')');
+      else {
+        var rec = null; try { rec = await DB.get('texts', it.id); } catch (e) {}
+        if (!rec) { msgs.push('kein Text gespeichert → Original-Datei nachreichen'); cnt.none++; }
+        else {
+          var tr = tocBuild(rec, it.pageCount, { links: (old && old.links) || [] });
+          if (tr && tr.entries.length) { await DB.put('texts', tr, 'toc-' + it.id); msgs.push('Inhalt: ' + tr.entries.length + ' Einträge'); cnt.toc++; }
+          else { msgs.push('kein Inhaltsverzeichnis im Text → Original-Datei nachreichen'); cnt.none++; }
+        }
+      }
+      if (thumbs && !it.thumbs) { await makeThumbs(it, function (n) { btn.textContent = (k + 1) + ' / ' + its.length + ' · Vorschau ' + n + '/' + it.pageCount; }); msgs.push('Vorschaubilder erzeugt'); cnt.th++; }
+    } catch (e) { msgs.push('Fehler: ' + (e.message || e)); }
+    log.insertAdjacentHTML('beforeend', '<div class="updrow"><span class="fn">' + esc(issueName(it)) + '</span><span class="st">' + esc(msgs.join(' · ')) + '</span></div>');
+  }
+  await loadData(); rerender();
+  btn.disabled = false; btn.textContent = 'Nochmal ausführen';
+  toast('Fertig: ' + cnt.toc + ' Inhaltsverzeichnisse' + (cnt.th ? ', ' + cnt.th + '× Vorschaubilder' : ''));
+}
+
 /* ----- Admin: Inhaltsverzeichnis prüfen und bearbeiten ----- */
 var TOCED = {};
 async function tocEditorOpen(id) {
@@ -2770,7 +2906,7 @@ function tocEditorRender(id) {
   var h = '<div class="help" style="margin-top:0">' + (T.entries.length ? '<b>' + T.entries.length + ' Einträge</b>' + (T.how ? ' · erkannt über ' + esc(T.how) : '') + (T.edited ? ' · von Hand bearbeitet' : '') : 'Noch kein Inhaltsverzeichnis.') +
     (hot ? ' · ' + hot + ' antippbare Stellen auf Seite ' + pl.join(', ') : '') + '</div>';
   if (T.dirty) h += '<div class="dupwarn">Noch nicht gespeichert – bitte prüfen und „Speichern“ drücken.</div>';
-  h += '<div class="prow2" style="flex-wrap:wrap"><button class="ghost" data-tocauto>Automatisch erkennen</button>' + (isBook ? '' : '<label class="ghost" style="display:inline-flex;align-items:center;cursor:pointer">Aus PDF neu einlesen<input type="file" accept="application/pdf,.pdf" hidden data-tocpdf></label>') + '<span class="help" data-tocst style="margin:0;align-self:center"></span></div>';
+  h += '<div class="prow2" style="flex-wrap:wrap"><button class="ghost" data-tocauto>Automatisch erkennen</button>' + '<label class="ghost" style="display:inline-flex;align-items:center;cursor:pointer">' + (isBook ? 'Aus EPUB neu einlesen' : 'Aus PDF neu einlesen') + '<input type="file" accept="' + (isBook ? 'application/epub+zip,.epub,' : '') + 'application/pdf,.pdf" hidden data-tocpdf></label>' + '<span class="help" data-tocst style="margin:0;align-self:center"></span></div>';
   if (!isBook && T.entries.some(function (e) { return e.printed != null; })) h += '<div class="tocoff"><span>PDF-Seite = gedruckte Seite +</span><input type="number" data-tocoff value="' + (T.offset || 0) + '"><button class="ghost" data-tocoffgo>Auf alle anwenden</button></div>';
   h += '<div class="toclist">' + T.entries.map(function (e, i) {
     return '<div class="tocrow"><img src="' + (e.p ? thumbURL(it, e.p) : '') + '" alt="" loading="lazy">' +
@@ -2812,24 +2948,18 @@ function tocEditorRender(id) {
     var rec = null; try { rec = await DB.get('texts', id); } catch (e) {}
     if (!rec) { st(isBook ? 'Für dieses Buch ist kein Text gespeichert – bitte das Buch neu hochladen.' : 'Für diese Ausgabe ist kein Text gespeichert – nutze „Aus PDF neu einlesen“.'); return; }
     var r = tocBuild(rec, N, { links: T.links || [] });
-    if (!r || !r.entries.length) { st(isBook ? 'Im gespeicherten Text ist kein Inhaltsverzeichnis zu finden. Lade das EPUB einmal neu hoch (gleicher Titel ersetzt das Buch) – dann wird sein Inhaltsverzeichnis exakt übernommen.' : 'Kein Inhaltsverzeichnis gefunden. Tipp: „Aus PDF neu einlesen“ liest auch Lesezeichen und Verweise aus dem PDF.'); return; }
+    if (!r || !r.entries.length) { st(isBook ? 'Im gespeicherten Text ist kein Inhaltsverzeichnis zu finden. Nutze „Aus EPUB neu einlesen“ – dann wird es exakt übernommen, ohne das Buch neu hochzuladen.' : 'Kein Inhaltsverzeichnis gefunden. Tipp: „Aus PDF neu einlesen“ liest auch Lesezeichen und Verweise aus dem PDF.'); return; }
     r.dirty = true; TOCED[id] = T = r; tocEditorRender(id);
   });
   var fp = q('[data-tocpdf]'); if (fp) fp.addEventListener('change', async function () {
     var f = fp.files[0]; if (!f) return;
     try {
-      st('PDF wird gelesen …');
-      var pdf = await pdfjsLib.getDocument({ data: await f.arrayBuffer() }).promise, nP = Math.min(N, pdf.numPages);
-      var texts = await extractTexts(pdf, nP, function (p) { st('Seite ' + p + ' von ' + nP + ' …'); });
-      st('Inhaltsverzeichnis wird gesucht …');
-      var extra = await pdfTocExtra(pdf, nP);
-      await pdf.destroy();
-      await DB.put('texts', texts, id);
-      var r = tocBuild(texts, nP, extra);
-      if (!r) { st('Kein Inhaltsverzeichnis gefunden – du kannst die Einträge von Hand anlegen.'); return; }
-      TOCED[id] = T = r; await DB.put('texts', T, 'toc-' + id); tocEditorRender(id);
-      toast('Inhaltsverzeichnis: ' + T.entries.length + ' Einträge');
-    } catch (e) { st('Das PDF konnte nicht gelesen werden.'); }
+      var r = await refreshFromFile(it, f, st);
+      var rec = null; try { rec = await DB.get('texts', 'toc-' + id); } catch (e) {}
+      if (rec && rec.entries) TOCED[id] = T = rec;
+      tocEditorRender(id);
+      st(r.keep ? 'Text aktualisiert – dein bearbeitetes Inhaltsverzeichnis bleibt.' : r.found ? 'Inhaltsverzeichnis: ' + r.n + ' Einträge' + (r.warn ? ' · ⚠ ' + r.warn : '') : 'Kein Inhaltsverzeichnis gefunden – du kannst die Einträge von Hand anlegen.');
+    } catch (e) { st('Die Datei konnte nicht gelesen werden.'); }
   });
 }
 
@@ -4494,7 +4624,7 @@ var ADMI = {
 function admIc(k, s) { return '<svg width="' + (s || 20) + '" height="' + (s || 20) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' + ADMI[k] + '</svg>'; }
 var ADMPAGES = [
   { id: 'dash', t: 'Dashboard', ic: 'home', secs: [] },
-  { id: 'issues', t: 'Inhalte', ic: 'book', secs: [['Neue Ausgabe', 'Hochladen', 'up'], ['Zeitschriften', 'Zeitschriften', 'news'], ['Comics', 'Comics', 'bolt'], ['Bücher', 'Bücher', 'book']] },
+  { id: 'issues', t: 'Inhalte', ic: 'book', secs: [['Neue Ausgabe', 'Hochladen', 'up'], ['Zeitschriften', 'Zeitschriften', 'news'], ['Comics', 'Comics', 'bolt'], ['Bücher', 'Bücher', 'book'], ['Bestehende Ausgaben aktualisieren', 'Aktualisieren', 'gear']] },
   { id: 'news', t: 'News', ic: 'news', secs: [['News', 'News', 'news']] },
   { id: 'ads', t: 'Werbung', ic: 'ad', secs: [['Werbung', 'Werbung', 'ad']] },
   { id: 'design', t: 'Design', ic: 'brush', secs: [['App-Kopf', 'App-Kopf', 'brush'], ['Farben', 'Farben', 'brush']] },
@@ -4652,6 +4782,16 @@ function renderPanel() {
     h += books.length ? '<div class="ilist bookl">' + books.map(function (it) { return '<div class="bk">' + issueRowHTML(it) + '</div>'; }).join('') + '</div>' : '<div class="pempty">Noch keine Bücher. Lade unter „Hochladen“ ein EPUB oder PDF hoch und wähle den Bereich „Buch“.</div>';
     h += '</div>';
   })();
+
+  /* Bestehende Ausgaben nachrüsten */
+  h += '<div class="psec"><h2>Bestehende Ausgaben aktualisieren</h2><div class="help" style="margin-top:0">Neue Funktionen für schon hochgeladene Ausgaben nachrüsten – ohne neu hochzuladen. Seiten, Cover, Preise und Verkauf bleiben unverändert. Von Hand bearbeitete Inhaltsverzeichnisse werden nie überschrieben.</div>';
+  h += '<div class="adblock"><b>Schnell, ohne Datei</b><div class="help">Sucht in ' + (S.issues.length === 1 ? 'der Ausgabe' : 'allen ' + S.issues.length + ' Ausgaben') + ' im gespeicherten Text nach dem Inhaltsverzeichnis und erzeugt fehlende Vorschaubilder für die Seitenleiste im Reader.</div>' +
+    '<label class="ck">Fehlende Vorschaubilder erzeugen<input type="checkbox" id="updThumbs" checked></label>' +
+    '<label class="ck">Schon erkannte Inhaltsverzeichnisse neu erkennen<input type="checkbox" id="updRedo"></label>' +
+    '<button class="go small" id="updAll"' + (S.issues.length ? '' : ' disabled') + '>Alle Ausgaben aktualisieren</button><div id="updLog" class="updtab"></div></div>';
+  h += '<div class="adblock"><b>Vollständig, mit den Original-Dateien</b><div class="help">Wähle die ursprünglichen PDFs und EPUBs – gern viele auf einmal. Sie werden über den Dateinamen den Ausgaben zugeordnet (prüfen und bei Bedarf ändern). Gelesen werden nur Text, Inhaltsverzeichnis, Lesezeichen und Verweise – die Seiten werden nicht neu erzeugt, das geht schnell. Für E-Books und für Inhaltsseiten zum Antippen ist dieser Weg nötig.</div>' +
+    '<label class="ghost" style="display:inline-flex;align-items:center;cursor:pointer;margin-top:6px">Dateien auswählen …<input type="file" id="updFiles" multiple accept="application/pdf,.pdf,application/epub+zip,.epub" hidden></label><div id="updMatch"></div></div>';
+  h += '</div>';
 
   /* App & Logo */
   h += '<div class="psec"><h2>App-Kopf</h2>' +
@@ -5015,6 +5155,9 @@ function bindPanel() {
     var sec = aAll.closest('.psec');
     aAll.addEventListener('click', function () { var ds = $$('details.imag', sec), open = !ds.every(function (d) { return d.open; }); ds.forEach(function (d) { d.open = open; ADMOPEN[d.getAttribute('data-mid')] = open; }); aAll.textContent = open ? 'Alle zuklappen' : 'Alle aufklappen'; });
   });
+  var ua = $('#updAll', panel); if (ua) ua.addEventListener('click', function () { updAllRun(ua); });
+  var uf = $('#updFiles', panel); if (uf) uf.addEventListener('change', function () { UPDF = Array.prototype.slice.call(uf.files).map(function (f) { var id = matchIssue(f); return { f: f, id: id, auto: !!id }; }); uf.value = ''; updMatchRender(); });
+  updMatchRender();
   $$('[data-merge]', panel).forEach(function (b) {
     b.addEventListener('click', async function () {
       var id = b.getAttribute('data-merge'), m = magById(id), t = magById($('[data-mergeto="' + id + '"]', panel).value);
