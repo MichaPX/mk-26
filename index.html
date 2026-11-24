@@ -931,7 +931,7 @@ body.full .sheet{padding-bottom:calc(28px + env(safe-area-inset-bottom))}
 /* ================= Grundlagen ================= */
 var MONTHS = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
 var STEP = 186;
-var APP_BUILD = '24.11.2026 14:33';
+var APP_BUILD = '24.11.2026 15:10';
 var ZOOM = 1;
 var NOW = new Date();
 var app = document.getElementById('app');
@@ -4242,7 +4242,7 @@ function renderPanel() {
         '<button class="go small" data-savemag="' + m.id + '">Speichern</button></details>';
       r += issuesOf(m.id).map(function (it) {
         var sp = samplePagesOf(it);
-        return moveRowHTML(it) + '<div class="irow"><img src="' + cover(it) + '" alt=""><div><span>' + label(it) + '</span><small>' + it.pageCount + ' Seiten' + (it.totalPages > it.pageCount ? ' von ' + it.totalPages : '') + ' · ' + esc(it.price) + ' · Leseprobe: ' + fmtPages(sp) + '</small></div>' + (it.thumbs ? '' : '<button class="del" style="color:#2B6CB0" data-mkthumbs="' + esc(it.id) + '" title="Kleine Vorschaubilder für die Seitenübersicht erzeugen">Vorschau</button>') + ((magById(it.magId) || {}).kind === 'comic' ? '<button class="del" style="color:#2B6CB0" data-comic="' + esc(it.id) + '" title="Bilder und Texte für Bild-für-Bild-Lesen einrichten">Bild für Bild</button>' : '') + '<button class="del" data-del="' + esc(it.id) + '">Löschen</button></div>' +
+        return moveRowHTML(it) + '<div class="irow"><img src="' + cover(it) + '" alt=""><div><span>' + label(it) + '</span><small>' + it.pageCount + ' Seiten' + (it.totalPages > it.pageCount ? ' von ' + it.totalPages : '') + ' · ' + esc(it.price) + ' · Leseprobe: ' + fmtPages(sp) + '</small></div>' + (it.thumbs ? '' : '<button class="del" style="color:#2B6CB0" data-mkthumbs="' + esc(it.id) + '" title="Kleine Vorschaubilder für die Seitenübersicht erzeugen">Vorschau</button>') + '<button class="del" style="color:#2B6CB0" data-trimcover="' + esc(it.id) + '" title="Weißen Rand um das Cover entfernen">Rand weg</button>' + ((magById(it.magId) || {}).kind === 'comic' ? '<button class="del" style="color:#2B6CB0" data-comic="' + esc(it.id) + '" title="Bilder und Texte für Bild-für-Bild-Lesen einrichten">Bild für Bild</button>' : '') + '<button class="del" data-del="' + esc(it.id) + '">Löschen</button></div>' +
           '<details class="ed"><summary>Ausgabe bearbeiten</summary>' +
           '<div class="prow"><div class="pf"><label>Einzelpreis</label><input type="text" data-i="' + it.id + '" data-k="price" value="' + esc(it.price) + '"></div><div class="pf"><label>Leseprobe-Seiten</label><input type="text" data-i="' + it.id + '" data-k="sample" value="' + esc(fmtPages(sp).replace(/–/g, '-')) + '"></div></div>' +
           '<div class="pf"><label>Verkauf dieser Ausgabe</label><select data-i="' + it.id + '" data-k="sale"><option value="">Wie beim Magazin (' + SALE[(magById(it.magId) || {}).sale || 'options'] + ')</option>' + Object.keys(SALE).map(function (k) { return '<option value="' + k + '"' + (it.sale === k ? ' selected' : '') + '>' + SALE[k] + '</option>'; }).join('') + '</select></div>' +
@@ -4655,6 +4655,18 @@ function bindPanel() {
       } catch (e) { st.textContent = 'Das PDF konnte nicht gelesen werden.'; }
     });
   });
+  $$('[data-trimcover]', panel).forEach(function (b) {
+    b.addEventListener('click', async function () {
+      var it = issueById(b.getAttribute('data-trimcover')); if (!it) return; b.disabled = true; b.textContent = '…';
+      try {
+        var img = await loadImg(cover(it)), c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight; c.getContext('2d').drawImage(img, 0, 0);
+        var t = trimWhite(c);
+        if (t === c) { toast('Kein weißer Rand gefunden'); b.disabled = false; b.textContent = 'Rand weg'; return; }
+        it.cover = await new Promise(function (r) { t.toBlob(r, 'image/jpeg', 0.88); });
+        await DB.put('issues', it); await loadData(); rerender(); renderPanel(); toast('Cover zugeschnitten');
+      } catch (e) { alert('Das Cover konnte nicht bearbeitet werden: ' + e.message); b.disabled = false; b.textContent = 'Rand weg'; }
+    });
+  });
   $$('[data-comic]', panel).forEach(function (b) { b.addEventListener('click', function () { openComicEditor(b.getAttribute('data-comic')); }); });
   $$('[data-mkthumbs]', panel).forEach(function (b) {
     b.addEventListener('click', async function () {
@@ -4772,27 +4784,115 @@ async function openEpub(buf) {
   var cont = xml(await txt('META-INF/container.xml')), opfPath = cont.getElementsByTagName('rootfile')[0].getAttribute('full-path');
   var opf = xml(await txt(opfPath)), man = {};
   Array.prototype.forEach.call(opf.getElementsByTagName('item'), function (it) { man[it.getAttribute('id')] = { href: zipPath(opfPath, it.getAttribute('href')), type: it.getAttribute('media-type') || '' }; });
-  var imgs = [];
+  var imgs = [], spine = [], textLen = 0, docs = 0;
+  var tag = function (t) { var e = opf.getElementsByTagName(t)[0]; return e ? e.textContent.trim() : ''; };
+  var fixed = /pre-paginated/.test(new XMLSerializer().serializeToString(opf));
   for (var r of Array.prototype.slice.call(opf.getElementsByTagName('itemref'))) {
     if (r.getAttribute('linear') === 'no') continue;
     var m = man[r.getAttribute('idref')]; if (!m) continue;
     if (/^image\//.test(m.type)) { imgs.push(m.href); continue; }
+    spine.push(m.href);
     var doc = new DOMParser().parseFromString(await txt(m.href), 'application/xhtml+xml'), src = null;
+    docs++; textLen += ((doc.documentElement && doc.documentElement.textContent) || '').replace(/\s+/g, ' ').trim().length;
     var im = doc.getElementsByTagName('img')[0]; if (im) src = im.getAttribute('src');
     if (!src) { var si = doc.getElementsByTagName('image')[0]; if (si) src = si.getAttribute('xlink:href') || si.getAttribute('href'); }
     if (src) { var p = zipPath(m.href, src); if (!/(^|\/)blank\.[a-z]+$/i.test(p)) imgs.push(p); }
   }
-  if (!imgs.length) throw new Error('Diese EPUB enthält keine Seitenbilder (nur Text-EPUBs mit festen Seiten werden unterstützt).');
-  var tag = function (t) { var e = opf.getElementsByTagName(t)[0]; return e ? e.textContent.trim() : ''; };
+  // normales E-Book (fließender Text) → Seiten selbst setzen
+  if (!fixed && (!imgs.length || textLen / Math.max(1, docs) > 400)) return { text: await openTextEpub(buf, idx, opf, spine, tag, txt) };
+  if (!imgs.length) throw new Error('In dieser EPUB wurden keine Seiten gefunden.');
   return {
     numPages: imgs.length, title: tag('dc:title'), author: tag('dc:creator'),
     image: async function (p) { var b = new Blob([await zipRead(buf, idx[imgs[p - 1]])]); return await createImageBitmap(b); }
+  };
+}
+/* ===== Text-EPUB (normale E-Books): im Browser zu Buchseiten setzen ===== */
+async function openTextEpub(buf, idx, opf, spine, tag, txt) {
+  var PW = 1100, PH = 1556, PX = 100, PT = 120, PB = 140, IW = PW - 2 * PX, IH = PH - PT - PB, GAP = 2 * PX, STRIDE = IW + GAP;
+  var CSS = '.bk{font-family:Georgia,"Times New Roman",serif;font-size:33px;line-height:1.55;color:#1d1d1f;text-align:justify;hyphens:auto;-webkit-hyphens:auto;width:' + IW + 'px;height:' + IH + 'px;column-width:' + IW + 'px;column-gap:' + GAP + 'px;column-fill:auto;overflow:visible}' +
+    '.bk p{margin:0 0 .25em}.bk p+p{text-indent:1.3em}' +
+    '.bk h1,.bk h2,.bk h3,.bk h4{font-family:-apple-system,"Helvetica Neue",Helvetica,Arial,sans-serif;line-height:1.2;text-align:left;break-after:avoid;margin:.2em 0 .8em;font-weight:700;hyphens:manual}' +
+    '.bk h1{font-size:56px}.bk h2{font-size:46px}.bk h3{font-size:38px}.bk h4{font-size:34px}' +
+    '.bk img,.bk svg{max-width:100%;max-height:' + (IH - 40) + 'px;height:auto;display:block;margin:.6em auto;break-inside:avoid}' +
+    '.bk a{color:inherit;text-decoration:none}.bk ul,.bk ol{margin:.3em 0 .6em 1.3em;padding:0}.bk li{margin:.15em 0}' +
+    '.bk blockquote{margin:.6em 1.4em;font-style:italic}.bk table{border-collapse:collapse;font-size:.82em;margin:.6em 0}.bk td,.bk th{border:1px solid #ccc;padding:4px 6px}' +
+    '.bk sup,.bk sub{font-size:.62em;line-height:0}.bk hr{border:0;border-top:1px solid #bbb;margin:1em 30%}.bk .cbr{break-before:column}';
+  var host = document.createElement('div');
+  host.style.cssText = 'position:fixed;left:-30000px;top:0;width:' + IW + 'px;height:' + IH + 'px;overflow:hidden;visibility:hidden';
+  host.innerHTML = '<style>' + CSS + '</style>'; document.body.appendChild(host);
+  var dataURL = async function (path) {
+    var en = idx[path]; if (!en) return '';
+    var bm = await createImageBitmap(new Blob([await zipRead(buf, en)])), s = Math.min(1, 1000 / Math.max(bm.width, bm.height));
+    var c = document.createElement('canvas'); c.width = Math.round(bm.width * s); c.height = Math.round(bm.height * s);
+    var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(bm, 0, 0, c.width, c.height); bm.close && bm.close();
+    return c.toDataURL('image/jpeg', 0.85);
+  };
+  var chapters = [], pages = [], texts = [], boxes = [], BLOCK = 'p,h1,h2,h3,h4,h5,h6,li,blockquote,dd,dt,figcaption,td,th,pre';
+  try {
+    for (var si = 0; si < spine.length; si++) {
+      var href = spine[si], raw = await txt(href), doc = new DOMParser().parseFromString(raw, 'application/xhtml+xml');
+      if (doc.getElementsByTagName('parsererror').length) doc = new DOMParser().parseFromString(raw, 'text/html');
+      var body = doc.body || doc.getElementsByTagName('body')[0]; if (!body) continue;
+      Array.prototype.slice.call(body.querySelectorAll('script,style,link,iframe,video,audio,object,embed,nav[epub\\:type="toc"]')).forEach(function (x) { x.remove(); });
+      var plain = (body.textContent || '').replace(/\s+/g, ' ').trim();
+      var imEls = Array.prototype.slice.call(body.querySelectorAll('img,image'));
+      // Titelbild-Seite: nur ein Bild, kaum Text → als ganzseitiges Bild
+      if (imEls.length === 1 && plain.length < 40) {
+        var isrc = imEls[0].getAttribute('src') || imEls[0].getAttribute('xlink:href') || imEls[0].getAttribute('href');
+        var du = await dataURL(zipPath(href, isrc));
+        if (du) { chapters.push({ cover: du }); pages.push({ c: chapters.length - 1, k: 0 }); texts.push([]); boxes.push([]); continue; }
+      }
+      if (!plain && !imEls.length) continue;
+      for (var im of imEls) {
+        var a = im.getAttribute('src') ? 'src' : (im.getAttribute('xlink:href') ? 'xlink:href' : 'href'), v = im.getAttribute(a);
+        var d2 = v ? await dataURL(zipPath(href, v)) : '';
+        if (im.tagName.toLowerCase() === 'image') { var ni = doc.createElementNS('http://www.w3.org/1999/xhtml', 'img'); ni.setAttribute('src', d2); ni.setAttribute('alt', ''); var sv = im.closest('svg') || im; sv.parentNode.replaceChild(ni, sv); }
+        else { im.setAttribute('src', d2); im.removeAttribute('srcset'); im.removeAttribute('width'); im.removeAttribute('height'); }
+      }
+      Array.prototype.slice.call(body.querySelectorAll('[style]')).forEach(function (x) { x.removeAttribute('style'); });
+      var flow = document.createElement('div'); flow.className = 'bk'; flow.setAttribute('lang', 'de');
+      Array.prototype.slice.call(body.childNodes).forEach(function (nd) { flow.appendChild(document.importNode(nd, true)); });
+      host.appendChild(flow);
+      await Promise.all(Array.prototype.slice.call(flow.querySelectorAll('img')).map(function (i) { return i.decode ? i.decode().catch(function () {}) : null; }));
+      var fr = flow.getBoundingClientRect(), n = Math.max(1, Math.round((flow.scrollWidth + GAP) / STRIDE));
+      var base = pages.length; chapters.push({ x: new XMLSerializer().serializeToString(flow) });
+      for (var k = 0; k < n; k++) { pages.push({ c: chapters.length - 1, k: k }); texts.push([]); boxes.push([]); }
+      // Text je Seite für Lesemodus & Vorlesen (mit Position für die Markierung)
+      Array.prototype.slice.call(flow.querySelectorAll(BLOCK)).forEach(function (el) {
+        if (el.querySelector(BLOCK)) return;
+        var t = (el.textContent || '').replace(/\s+/g, ' ').trim(); if (t.replace(/[^A-Za-zÄÖÜäöüß0-9]/g, '').length < 2) return;
+        var rs = Array.prototype.slice.call(el.getClientRects()); if (!rs.length) return;
+        var pg = Math.max(0, Math.min(n - 1, Math.floor((rs[0].left - fr.left + 2) / STRIDE)));
+        var b = null;
+        rs.forEach(function (r) { var p2 = Math.floor((r.left - fr.left + 2) / STRIDE); if (p2 !== pg) return; var x0 = (r.left - fr.left - pg * STRIDE + PX) / PW, x1 = (r.right - fr.left - pg * STRIDE + PX) / PW, y0 = (r.top - fr.top + PT) / PH, y1 = (r.bottom - fr.top + PT) / PH; b = b ? [Math.min(b[0], x0), Math.max(b[1], x1), Math.min(b[2], y0), Math.max(b[3], y1)] : [x0, x1, y0, y1]; });
+        texts[base + pg].push(t); boxes[base + pg].push(b || [0, 1, 0, 1]);
+      });
+      host.removeChild(flow);
+    }
+  } finally { host.remove(); }
+  if (!pages.length) throw new Error('In dieser EPUB wurde kein Inhalt gefunden.');
+  var draw = function (src) { return new Promise(function (res, rej) { var i = new Image(); i.onload = function () { res(i); }; i.onerror = function () { rej(new Error('Seite konnte nicht gesetzt werden')); }; i.src = src; }); };
+  return {
+    numPages: pages.length, title: tag('dc:title'), isEpub: true, isText: true,
+    render: async function (canvas, p) {
+      var pg = pages[p - 1], ch = chapters[pg.c]; canvas.width = PW; canvas.height = PH;
+      var g = canvas.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, PW, PH);
+      if (ch.cover) { var ci = await draw(ch.cover), s = Math.max(PW / ci.width, PH / ci.height); g.drawImage(ci, (PW - ci.width * s) / 2, (PH - ci.height * s) / 2, ci.width * s, ci.height * s); return; }
+      var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + PW + '" height="' + PH + '"><foreignObject x="0" y="0" width="' + PW + '" height="' + PH + '"><div xmlns="http://www.w3.org/1999/xhtml" style="width:' + PW + 'px;height:' + PH + 'px;background:#fff;position:relative;overflow:hidden"><style>' + CSS + '</style>' +
+        '<div style="position:absolute;left:' + PX + 'px;top:' + PT + 'px;width:' + IW + 'px;height:' + IH + 'px;overflow:hidden"><div style="transform:translateX(' + (-pg.k * STRIDE) + 'px);width:' + IW + 'px">' + ch.x + '</div></div>' +
+        '<div style="position:absolute;left:0;right:0;bottom:62px;text-align:center;font:26px Georgia,serif;color:#9a9a9a">' + p + '</div></div></foreignObject></svg>';
+      var img = await draw('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg));
+      g.drawImage(img, 0, 0);
+    },
+    texts: async function (N) { return { v: 2, pages: texts.slice(0, N), boxes: boxes.slice(0, N) }; },
+    destroy: async function () {}
   };
 }
 /* gemeinsame Schnittstelle für PDF und EPUB beim Hochladen */
 async function openUploadDoc(buf, isEpub) {
   if (isEpub) {
     var ep = await openEpub(buf);
+    if (ep.text) return ep.text;
     return { numPages: ep.numPages, title: ep.title, isEpub: true,
       render: async function (canvas, p) { var bm = await ep.image(p), w = Math.min(1400, bm.width); canvas.width = w; canvas.height = Math.round(bm.height * w / bm.width); var c = canvas.getContext('2d'); c.fillStyle = '#FFFFFF'; c.fillRect(0, 0, canvas.width, canvas.height); c.drawImage(bm, 0, 0, canvas.width, canvas.height); bm.close && bm.close(); },
       texts: async function (N) { var a = []; for (var i = 0; i < N; i++) a.push([]); return a; },
@@ -4804,6 +4904,23 @@ async function openUploadDoc(buf, isEpub) {
     texts: function (N) { return extractTexts(pdf, N); },
     destroy: function () { return pdf.destroy(); } };
 }
+
+/* weißen Rand um ein Cover wegschneiden (z. B. Buch-PDF mit Cover auf einer größeren Seite) */
+function trimWhite(src) {
+  var W = src.width, H = src.height, sc = Math.min(1, 400 / W), w = Math.max(1, Math.round(W * sc)), h = Math.max(1, Math.round(H * sc));
+  var t = document.createElement('canvas'); t.width = w; t.height = h; var g = t.getContext('2d', { willReadFrequently: true }); g.drawImage(src, 0, 0, w, h);
+  var d = g.getImageData(0, 0, w, h).data, white = function (x, y) { var o = (y * w + x) * 4; return d[o] > 238 && d[o + 1] > 238 && d[o + 2] > 238; };
+  var rowWhite = function (y) { var n = 0; for (var x = 0; x < w; x++) if (!white(x, y)) n++; return n < w * 0.01; };
+  var colWhite = function (x, y0, y1) { var n = 0; for (var y = y0; y < y1; y++) if (!white(x, y)) n++; return n < (y1 - y0) * 0.01; };
+  var y0 = 0, y1 = h - 1; while (y0 < h - 1 && rowWhite(y0)) y0++; while (y1 > y0 && rowWhite(y1)) y1--;
+  var x0 = 0, x1 = w - 1; while (x0 < w - 1 && colWhite(x0, y0, y1)) x0++; while (x1 > x0 && colWhite(x1, y0, y1)) x1--;
+  var cw = x1 - x0 + 1, ch = y1 - y0 + 1;
+  if (cw > w * 0.97 && ch > h * 0.97) return src;              // kein nennenswerter Rand
+  if (cw < w * 0.3 || ch < h * 0.3) return src;               // sicherheitshalber: nicht zu viel wegschneiden
+  var out = document.createElement('canvas'); out.width = Math.round(cw / sc); out.height = Math.round(ch / sc);
+  out.getContext('2d').drawImage(src, x0 / sc, y0 / sc, cw / sc, ch / sc, 0, 0, out.width, out.height);
+  return out;
+}
 async function pickFile(f) {
   if (U.busy) return;
   var isEpub = /\.epub$/i.test(f.name) || f.type === 'application/epub+zip';
@@ -4813,7 +4930,7 @@ async function pickFile(f) {
   var title = '';
   try {
     var dd = await openUploadDoc(U.buf, isEpub);
-    U.pages = dd.numPages; title = dd.title;
+    U.pages = dd.numPages; title = dd.title; U.epubText = !!dd.isText;
     await dd.destroy();
   } catch (err) {
     alert((isEpub ? 'Die EPUB-Datei' : 'Die PDF-Datei') + ' konnte nicht gelesen werden.' + (err && err.message ? '\n\n' + err.message : ''));
@@ -4847,7 +4964,7 @@ function restoreForm() {
     if (last) $('#fPrice', panel).value = last.price;
   }
   $('#fLim', panel).value = U.pages > 60 && !U.epub ? '40' : '0';
-  if (U.epub && $('#fKind', panel)) $('#fKind', panel).value = 'comic';
+  if (U.epub && $('#fKind', panel)) $('#fKind', panel).value = U.epubText ? 'book' : 'comic';
   syncNewMag();
   rememberForm();
 }
@@ -4903,9 +5020,10 @@ async function processUpload() {
       await DB.put('pages', await new Promise(function (r) { tcv.toBlob(r, 'image/jpeg', 0.75); }), issueId + ':t' + pad3(p));
       if (p === 1) {
         aspect = canvas.height / canvas.width;
+        var cvs = trimWhite(canvas), ca = cvs.height / cvs.width;
         var c2 = document.createElement('canvas');
-        c2.width = 460; c2.height = Math.round(460 * aspect);
-        c2.getContext('2d').drawImage(canvas, 0, 0, c2.width, c2.height);
+        c2.width = 460; c2.height = Math.round(460 * ca);
+        c2.getContext('2d').drawImage(cvs, 0, 0, c2.width, c2.height);
         coverBlob = await new Promise(function (r) { c2.toBlob(r, 'image/jpeg', 0.86); });
       }
       bar.style.width = (p / N * 100) + '%';
