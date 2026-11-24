@@ -439,6 +439,12 @@ body:not(.tablet) .info p{font-size:12.5px}
 body:not(.tablet) .cta{margin-top:5px;gap:8px}
 body:not(.tablet) .cta .pbtn,body:not(.tablet) .cta .sbtn{height:40px;font-size:14px}
 body:not(.tablet) .cta .roundbtn,body:not(.tablet) .cta .savebtn{width:40px;height:40px;flex:0 0 40px}
+.ksec.flat details.imag>summary{display:none}
+.ksec.flat .imbody>details.ed:first-child{display:none}
+.ksec.flat details.imag{border:0;padding:0;margin:0}
+.ksec.flat .imbody{padding-top:0}
+.ksec.flat .imove:first-child{margin-top:18px;padding-top:14px;border-top:1px solid #ECEEF2}
+.gchip{font-size:14px}
 .lfly{position:absolute;left:0;top:0;transform-origin:0 0;border-radius:2px 5px 5px 2px;background-size:cover;background-position:center;box-shadow:0 26px 50px rgba(0,0,0,.45);will-change:transform}
 .lfly::after{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(90deg,rgba(0,0,0,.3),rgba(255,255,255,.12) 3%,rgba(255,255,255,0) 8%)}
 .lovl{position:absolute;inset:0;z-index:60;pointer-events:none}
@@ -931,7 +937,7 @@ body.full .sheet{padding-bottom:calc(28px + env(safe-area-inset-bottom))}
 /* ================= Grundlagen ================= */
 var MONTHS = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
 var STEP = 186;
-var APP_BUILD = '24.11.2026 15:10';
+var APP_BUILD = '24.11.2026 15:22';
 var ZOOM = 1;
 var NOW = new Date();
 var app = document.getElementById('app');
@@ -1264,7 +1270,11 @@ function catListAll() {
   return out;
 }
 function genreOk(it) { return !isBookKind(S.kind) || S.cat === 'all' || catKey(genreOf(it)) === S.cat; }
-function kList() { var l = issuesOf(S.magId, S.year), f = l.filter(genreOk); return f.length ? f : l; }
+function bookPool() { return S.issues.filter(function (it) { var m = magById(it.magId); return m && m.kind === 'book'; }).sort(function (a, b) { return (b.added || 0) - (a.added || 0); }); }
+function kList() {
+  if (S.kind === 'book') { var bp = bookPool(), bf = bp.filter(genreOk); return bf.length ? bf : bp; }   // Bücher: alle zusammen, Filter nur nach Genre
+  var l = issuesOf(S.magId, S.year), f = l.filter(genreOk); return f.length ? f : l;
+}
 function magsInCat() {
   var base = magsOfKind();
   if (S.cat === 'all') return base;
@@ -1305,7 +1315,7 @@ function nextIssueText(magId) {
 }
 function saved(it) { return (S.saved || []).indexOf(it.id) >= 0; }
 function inLib(it) { return (saleMode(it) !== 'free' && bought(it)) || saved(it); }
-function label(it) { return MONTHS[it.month - 1] + ' ' + it.year; }
+function label(it) { var m = magById(it.magId); if (m && m.kind === 'book') return it.title || m.name; return MONTHS[it.month - 1] + ' ' + it.year; }
 function num(it) { var m = magById(it.magId) || {}; if (isBookKind(m.kind)) return genreOf(it) || (m.kind === 'book' ? 'Buch' : 'Comic'); return 'Ausgabe ' + pad(it.month) + '/' + it.year; }
 function cover(it) { return S.covers[it.id] || ''; }
 
@@ -1730,6 +1740,10 @@ function kioskHTML() {
   var kh = kindsHere(); fixKind();
   if (kh.length > 1) h += '<div class="kinds noscroll" role="tablist" aria-label="Bereich">' + kh.map(function (k) { return [k, { mag: 'Zeitschriften', book: 'Bücher', comic: 'Comics' }[k]]; }).map(function (k) { var on = S.kind === k[0]; return '<button class="bare' + (on ? ' on' : '') + '" role="tab" aria-selected="' + on + '" data-act="kind" data-arg="' + k[0] + '">' + k[1] + '</button>'; }).join('') + '</div>';
   var cats = catList();
+  if (S.kind === 'book') {
+    h += '<div class="chips noscroll" role="group" aria-label="Genre">' + [{ key: 'all', name: 'Alle' }].concat(cats).map(function (c) { var on = S.cat === c.key; return '<button class="btn chip gchip' + (on ? ' on' : '') + '" data-act="cat" data-arg="' + esc(c.key) + '" aria-pressed="' + on + '">' + esc(c.name) + '</button>'; }).join('') + '</div>';
+    cats = [];
+  }
   if (cats.length > 1) {
     var tile = function (key, name, url) {
       return '<button class="bare cat' + (url ? ' img' : '') + (S.cat === key ? ' on' : '') + '" data-act="cat" data-arg="' + esc(key) + '" aria-pressed="' + (S.cat === key) + '">' +
@@ -1737,12 +1751,12 @@ function kioskHTML() {
     };
     h += '<div class="cats noscroll" role="group" aria-label="Kategorien">' + tile('all', 'Alle', S.catImg.all || '') + cats.map(function (c) { return tile(c.key, c.name, S.catImg[c.key] || ''); }).join('') + '</div>';
   }
-  h += '<div class="chips noscroll">' + magsInCat().map(function (m) { return magChipHTML(m, m.id === S.magId, true); }).join('') + '</div>';
+  if (S.kind !== 'book') h += '<div class="chips noscroll">' + magsInCat().map(function (m) { return magChipHTML(m, m.id === S.magId, true); }).join('') + '</div>';
   var ys = yearsOf(S.magId);
   var yi = Math.max(0, ys.indexOf(S.year));
   var yCount = function (y) { var c = issuesOf(S.magId, y).length; return c + (c === 1 ? ' Ausgabe' : ' Ausgaben'); };
   h += '<div class="bar"><div class="ywrap">' +
-    (ys.length > 1
+    (S.kind === 'book' ? '' : ys.length > 1
       ? '<button class="bare ybtn' + (S.yearMenu ? ' open' : '') + '" data-act="ymenu" aria-haspopup="listbox" aria-expanded="' + !!S.yearMenu + '" aria-label="Jahrgang ' + S.year + ' – anderen Jahrgang wählen"><b>' + S.year + '</b></button>'
       : '<div class="ybtn static"><b>' + S.year + '</b></div>') +
     (S.yearMenu ? '<button class="yscrim" data-act="ymenu" aria-label="Schließen"></button><div class="ypop" role="listbox" aria-label="Jahrgang wählen">' + ys.map(function (y) {
@@ -1765,7 +1779,7 @@ function kioskHTML() {
     }).join('') + '</div></div>';
     h += '<div class="info" id="kinfo">' + infoHTML(list[S.kIndex]) + '</div>';
   } else {
-    h += '<div class="gridwrap"><div class="ghead"><h2>Alle Ausgaben ' + S.year + '</h2><div class="sub">' + esc(mag.name) + ' · ' + list.length + (list.length === 1 ? ' Ausgabe' : ' Ausgaben') + '</div></div><div class="grid3">' +
+    h += '<div class="gridwrap"><div class="ghead"><h2>' + (S.kind === 'book' ? 'Alle Bücher' : 'Alle Ausgaben ' + S.year) + '</h2><div class="sub">' + (S.kind === 'book' ? (S.cat !== 'all' ? esc((catList().filter(function (c) { return c.key === S.cat; })[0] || {}).name || '') + ' · ' : '') : esc(mag.name) + ' · ') + list.length + (S.kind === 'book' ? (list.length === 1 ? ' Buch' : ' Bücher') : (list.length === 1 ? ' Ausgabe' : ' Ausgaben')) + '</div></div><div class="grid3">' +
       list.map(function (it, i) {
         var o = owns(it);
         return '<button class="bare gitem" data-act="gpick" data-arg="' + i + '" aria-label="' + esc(mag.name + ' ' + label(it)) + '"><div class="gcover"><img src="' + cover(it) + '" alt=""></div><b>' + MONTHS[it.month - 1] + '</b><small class="' + (o ? 'own' : '') + '">' + (saleMode(it) === 'free' ? 'Gratis' : magSubscribed(mag) ? 'Im Abo' : o ? 'Gekauft' : esc(it.price)) + '</small></button>';
@@ -1780,7 +1794,7 @@ function infoHTML(it) {
   var mag = magById(it.magId);
   var o = owns(it), mode = saleMode(it);
   var buy = mode === 'options' ? 'Kaufoptionen' : 'Kaufen · ' + esc(it.price);
-  if (mode === 'free') return '<div class="kick">' + esc(mag.name) + ' · ' + num(it) + ' · Gratis</div><h2>' + label(it) + '</h2>' + (it.teaser ? '<p class="teaser" data-act="lmteaser" data-arg="' + it.id + '" role="button" tabindex="0" title="Im Lesemodus lesen">' + esc(it.teaser) + '</p>' : '<p>' + it.pageCount + ' Seiten' + (mag.cat ? ' · ' + esc(mag.cat) : '') + '</p>') +
+  if (mode === 'free') return '<div class="kick">' + (mag.kind === 'book' ? esc(num(it)) : esc(mag.name) + ' · ' + num(it)) + ' · Gratis</div><h2>' + label(it) + '</h2>' + (it.teaser ? '<p class="teaser" data-act="lmteaser" data-arg="' + it.id + '" role="button" tabindex="0" title="Im Lesemodus lesen">' + esc(it.teaser) + '</p>' : '<p>' + it.pageCount + ' Seiten' + (mag.cat ? ' · ' + esc(mag.cat) : '') + '</p>') +
     '<div class="cta"><button class="btn pbtn" data-act="read" data-arg="' + it.id + '">Gratis lesen</button>' + saveBtn(it) + '</div>';
   var sb = subOf(it);
   if (sb) {
@@ -1788,14 +1802,14 @@ function infoHTML(it) {
       : sb.type === 'flat' ? 'In deiner Kiosk-Flatrate · verlängert sich am ' + fmtDate(sb.until)
       : sb.type === 'jahr' ? 'In deinem Jahresabo · läuft bis ' + fmtDate(sb.until)
       : 'In deinem Monatsabo · verlängert sich am ' + fmtDate(sb.until);
-    return '<div class="kick">' + esc(mag.name) + ' · ' + num(it) + '</div><h2>' + label(it) + '</h2>' +
+    return '<div class="kick">' + (mag.kind === 'book' ? esc(num(it)) : esc(mag.name) + ' · ' + num(it)) + '</div><h2>' + label(it) + '</h2>' +
       '<div class="subline">' + ICON.check16 + '<span>' + line + '</span></div>' +
       (sb.type !== 'single' ? '<div class="subnext">' + nextIssueText(it.magId) + '</div>' : '') +
       '<div class="cta"><button class="btn pbtn" data-act="read" data-arg="' + it.id + '">Jetzt lesen</button>' +
       '<button class="btn savebtn" data-act="lmopen" data-arg="' + it.id + '" aria-label="Lesemodus" style="font-weight:750;font-size:15px">Aa</button>' +
       '<button class="btn savebtn" data-act="lmspeak" data-arg="' + it.id + '" aria-label="Vorlesen">' + ICON.speak + '</button></div>';
   }
-  return '<div class="kick">' + esc(mag.name) + ' · ' + num(it) + '</div><h2>' + label(it) + '</h2>' + (it.teaser ? '<p class="teaser" data-act="lmteaser" data-arg="' + it.id + '" role="button" tabindex="0" title="Im Lesemodus lesen">' + esc(it.teaser) + '</p>' : '<p>' + it.pageCount + ' Seiten' + (mag.cat ? ' · ' + esc(mag.cat) : '') + '</p>') +
+  return '<div class="kick">' + (mag.kind === 'book' ? esc(num(it)) : esc(mag.name) + ' · ' + num(it)) + '</div><h2>' + label(it) + '</h2>' + (it.teaser ? '<p class="teaser" data-act="lmteaser" data-arg="' + it.id + '" role="button" tabindex="0" title="Im Lesemodus lesen">' + esc(it.teaser) + '</p>' : '<p>' + it.pageCount + ' Seiten' + (mag.cat ? ' · ' + esc(mag.cat) : '') + '</p>') +
     (o ? '<div class="cta"><button class="btn pbtn" data-act="read" data-arg="' + it.id + '">Jetzt lesen</button>' + (bought(it) ? '' : saveBtn(it)) + '</div>'
        : '<div class="cta"><button class="btn sbtn" data-act="preview" data-arg="' + it.id + '">Leseprobe</button><button class="btn pbtn" data-act="buy" data-arg="' + it.id + '">' + buy + '</button>' + saveBtn(it) + '</div>');
 }
@@ -3819,6 +3833,7 @@ var ACT = {
   cat: function (k) {
     if (k === S.cat) return;
     S.cat = k;
+    if (S.kind === 'book') { switchKiosk({ kIndex: 0 }); return; }
     var list = magsInCat();
     var keep = list.some(function (m) { return m.id === S.magId; });
     var id = keep ? S.magId : (list[0] && list[0].id);
@@ -4079,6 +4094,9 @@ function bindLogin() {
 
 /* Ausgabe direkt einem Titel zuordnen (oder neuen Titel anlegen) – sichtbar an jeder Ausgabe */
 function moveRowHTML(it) {
+  var mk = magById(it.magId) || {};
+  if (mk.kind === 'book') return '<div class="imove"><span>Buchtitel</span><input type="text" data-btitle="' + esc(it.id) + '" value="' + esc(it.title || mk.name || '') + '"></div>' +
+    '<div class="imove"><span>Genre</span><input type="text" list="genrelist" data-genre="' + esc(it.id) + '" value="' + esc(it.genre || '') + '" placeholder="z. B. Sachbuch, Krimi, Drama"></div>';
   var all = (S.allMags || S.mags).slice().sort(function (x, y) { return String(x.name).localeCompare(String(y.name), 'de'); });
   var KL = { mag: 'Zeitschrift', book: 'Buch', comic: 'Comic' };
   return '<div class="imove"><span>Gehört zu</span><select data-move="' + esc(it.id) + '">' + all.map(function (mm) { return '<option value="' + esc(mm.id) + '"' + (mm.id === it.magId ? ' selected' : '') + '>' + esc(mm.name) + ' (' + KL[mm.kind || 'mag'] + (mm.cat ? ' · ' + esc(mm.cat) : '') + ')</option>'; }).join('') + '<option value="__new">+ Neuen Titel anlegen …</option></select></div>' +
@@ -4194,7 +4212,8 @@ function renderPanel() {
   h += '<div class="dz" id="dz" role="button" tabindex="0"><div style="color:#8A8A92;margin-bottom:6px">' + ICON.upload + '</div><b>PDF oder EPUB hierher ziehen</b>oder klicken zum Auswählen<input type="file" id="fin" accept="application/pdf,.pdf,application/epub+zip,.epub" hidden></div>';
   h += '<div class="file" id="finfo" style="display:none"></div>';
   h += '<div id="form" style="margin-top:14px;display:none">';
-  h += '<div class="pf"><label for="fMag">Magazin</label><select id="fMag">' + mags.map(function (m) { return '<option value="' + esc(m.id) + '">' + esc(m.name) + '</option>'; }).join('') + '<option value="__new">+ Neues Magazin anlegen</option></select></div>';
+  h += '<div class="pf"><label for="fMag">Wohin?</label><select id="fMag"><option value="__book">📚 Buch (Titel &amp; Genre)</option><optgroup label="Zeitschrift oder Comic-Reihe">' + mags.filter(function (m) { return m.kind !== 'book'; }).map(function (m) { return '<option value="' + esc(m.id) + '">' + esc(m.name) + '</option>'; }).join('') + '<option value="__new">+ Neue Zeitschrift / Comic-Reihe anlegen</option></optgroup></select></div>' +
+    '<div class="newmag" id="newbook"><div class="pf"><label for="fBTitle">Buchtitel</label><input id="fBTitle" type="text" placeholder="z. B. Staatenlos"></div></div>';
   h += '<div class="newmag" id="newmag"><div class="pf"><label for="fName">Name des Magazins</label><input id="fName" type="text" placeholder="z. B. PC Games"></div>' +
     '<div class="pf"><label for="fKind">Bereich</label>' + kindSel('id="fKind"', 'mag') + '</div>' +
     '<div class="prow"><div class="pf"><label for="fCat">Kategorie</label><input id="fCat" type="text" list="catlist" placeholder="z. B. Games"></div><div class="pf"><label for="fColor">Farbe</label><input id="fColor" type="color" style="padding:3px"></div></div>' +
@@ -4231,9 +4250,9 @@ function renderPanel() {
     h += '<div class="ktools"><input type="search" id="admFind" placeholder="Titel suchen …" value="' + esc(S.admFind || '') + '"><button class="ghost" id="admAll">Alle aufklappen</button></div>';
     h += [AK].map(function (kd) {
       var list = mags.filter(function (m) { return (m.kind || 'mag') === kd; });
-      return '<div class="ksec">' + (list.length ? '' : '<div class="ksec-empty">Noch nichts in „' + KN[kd] + '“. Über den Umschalter bei einem Titel verschiebst du ihn hierher.</div>') + '<div class="ilist">' + list.map(function (m) {
+      return '<div class="ksec' + (kd === 'book' ? ' flat' : '') + '">' + (list.length ? '' : '<div class="ksec-empty">Noch nichts in „' + KN[kd] + '“. Über den Umschalter bei einem Titel verschiebst du ihn hierher.</div>') + '<div class="ilist">' + list.map(function (m) {
       var nI = issuesOf(m.id).length;
-      var r = '<details class="imag" data-mid="' + esc(m.id) + '"' + (ADMOPEN[m.id] ? ' open' : '') + '><summary class="imsum">' + (S.logos[m.id] ? '<img src="' + S.logos[m.id] + '" alt="" style="width:28px;height:28px;border-radius:14px;object-fit:cover;flex:none">' : '<i style="width:12px;height:12px;border-radius:6px;background:' + esc(m.color) + ';display:block;flex:none"></i>') + '<span class="imname"><b>' + esc(m.name) + '</b><small>' + nI + (nI === 1 ? ' Ausgabe' : ' Ausgaben') + (m.cat ? ' · ' + esc(m.cat) : '') + '</small></span>' + '<span class="kseg" role="group" aria-label="Bereich">' + KINDS.map(function (k) { return '<button class="' + ((m.kind || 'mag') === k[0] ? 'on' : '') + '" data-setkind="' + esc(m.id) + '|' + k[0] + '">' + k[1] + '</button>'; }).join('') + '</span></summary><div class="imbody">';
+      var r = '<details class="imag" data-mid="' + esc(m.id) + '"' + (ADMOPEN[m.id] || m.kind === 'book' ? ' open' : '') + '><summary class="imsum">' + (S.logos[m.id] ? '<img src="' + S.logos[m.id] + '" alt="" style="width:28px;height:28px;border-radius:14px;object-fit:cover;flex:none">' : '<i style="width:12px;height:12px;border-radius:6px;background:' + esc(m.color) + ';display:block;flex:none"></i>') + '<span class="imname"><b>' + esc(m.name) + '</b><small>' + nI + (nI === 1 ? ' Ausgabe' : ' Ausgaben') + (m.cat ? ' · ' + esc(m.cat) : '') + '</small></span>' + '<span class="kseg" role="group" aria-label="Bereich">' + KINDS.map(function (k) { return '<button class="' + ((m.kind || 'mag') === k[0] ? 'on' : '') + '" data-setkind="' + esc(m.id) + '|' + k[0] + '">' + k[1] + '</button>'; }).join('') + '</span></summary><div class="imbody">';
       r += '<details class="ed"><summary>Magazin bearbeiten</summary>' +
         '<div class="prow"><div class="pf"><label>Name</label><input type="text" data-m="' + m.id + '" data-k="name" value="' + esc(m.name) + '"></div><div class="pf" style="flex:.6"><label>Art</label>' + kindSel('data-m="' + m.id + '" data-k="kind"', m.kind) + '</div></div>' +
         '<div class="prow"><div class="pf"><label>Kategorie</label><input type="text" list="catlist" data-m="' + m.id + '" data-k="cat" value="' + esc(m.cat || '') + '"></div><div class="pf"><label>Farbe</label><input type="color" data-m="' + m.id + '" data-k="color" value="' + esc(m.color || '#888888') + '" style="padding:3px"></div></div>' +
@@ -4580,6 +4599,13 @@ function bindPanel() {
   $('#bTitle', panel).addEventListener('change', function (e) { saveAd('brand', { title: e.target.value.trim() || null }); });
 
   /* Magazin / Ausgabe bearbeiten */
+  $$('[data-btitle]', panel).forEach(function (inp) {
+    inp.addEventListener('change', async function () {
+      var it = issueById(inp.getAttribute('data-btitle')); if (!it) return;
+      var t = inp.value.trim(); if (!t || t === it.title) return;
+      it.title = t; await DB.put('issues', it); await loadData(); rerender(); toast('Titel gespeichert');
+    });
+  });
   $$('[data-genre]', panel).forEach(function (inp) {
     inp.addEventListener('change', async function () {
       var it = issueById(inp.getAttribute('data-genre')); if (!it) return;
@@ -4743,8 +4769,10 @@ function bindPanel() {
   var lo = $('#aLogout', panel); if (lo) lo.addEventListener('click', function () { setAuth(null); renderPanel(); });
 }
 function syncNewMag() {
-  var isNew = $('#fMag', panel).value === '__new';
+  var v = $('#fMag', panel).value, isNew = v === '__new', isBook = v === '__book';
   $('#newmag', panel).style.display = isNew ? 'block' : 'none';
+  var nb = $('#newbook', panel); if (nb) nb.style.display = isBook ? 'block' : 'none';
+  $$('#fMonth,#fYear', panel).forEach(function (x) { var pf = x.closest('.prow') || x.closest('.pf'); if (pf) pf.style.display = isBook ? 'none' : ''; });
 }
 async function showStorage() {
   try {
@@ -4954,7 +4982,8 @@ function restoreForm() {
   var g = U.guess;
   var sel = $('#fMag', panel);
   var match = S.mags.filter(function (m) { return g.title && slug(m.name) === slug(g.title); })[0];
-  sel.value = match ? match.id : (S.mags.length && !g.title ? S.mags[0].id : '__new');
+  sel.value = U.epubText ? '__book' : match ? match.id : (S.mags.length && !g.title ? S.mags.filter(function (m) { return m.kind !== 'book'; }).concat([{ id: '__new' }])[0].id : '__new');
+  if ($('#fBTitle', panel)) $('#fBTitle', panel).value = g.title || '';
   $('#fName', panel).value = match ? '' : g.title;
   $('#fColor', panel).value = PALETTE[S.mags.length % PALETTE.length];
   $('#fMonth', panel).value = String(g.month || NOW.getMonth() + 1);
@@ -4970,7 +4999,7 @@ function restoreForm() {
 }
 function rememberForm() {
   U.form = {};
-  ['fMag', 'fName', 'fKind', 'fGenre', 'fCat', 'fColor', 'fAm', 'fAy', 'fMonth', 'fYear', 'fPrice', 'fLim', 'fSample', 'fTeaser'].forEach(function (id) {
+  ['fMag', 'fBTitle', 'fName', 'fKind', 'fGenre', 'fCat', 'fColor', 'fAm', 'fAy', 'fMonth', 'fYear', 'fPrice', 'fLim', 'fSample', 'fTeaser'].forEach(function (id) {
     var el = $('#' + id, panel); if (!el) return;
     U.form[id] = el.value;
     el.addEventListener('input', function () { U.form[id] = el.value; });
@@ -4987,8 +5016,12 @@ async function processUpload() {
   var sampleStr = $('#fSample', panel).value;
   var teaser = $('#fTeaser', panel).value.trim();
   if (!year || year < 1990) { alert('Bitte ein gültiges Jahr eingeben.'); return; }
-  var mag;
-  if (selV === '__new') {
+  var mag, bookTitle = '';
+  if (selV === '__book') {
+    bookTitle = (($('#fBTitle', panel) || {}).value || '').trim();
+    if (!bookTitle) { alert('Bitte den Buchtitel eingeben.'); $('#fBTitle', panel).focus(); return; }
+    mag = (S.allMags || S.mags).filter(function (x) { return x.id === 'buecher'; })[0] || { id: 'buecher', name: 'Bücher', kind: 'book', color: '#2F5D8A', created: Date.now() };
+  } else if (selV === '__new') {
     var name = $('#fName', panel).value.trim();
     if (!name) { alert('Bitte einen Namen für das Magazin eingeben.'); $('#fName', panel).focus(); return; }
     var id = slug(name), n2 = 2;
@@ -4996,8 +5029,8 @@ async function processUpload() {
     mag = { id: id, name: name, cat: $('#fCat', panel).value.trim(), kind: ($('#fKind', panel) || {}).value || 'mag', color: $('#fColor', panel).value, aboMonth: $('#fAm', panel).value.trim(), aboYear: $('#fAy', panel).value.trim(), created: Date.now() };
     if (U.newLogo) { mag.logo = U.newLogo; mag.logoAspect = U.newLogoAspect || 1; mag.logoBg = U.newLogoBg || '#FFFFFF'; }
   } else mag = magById(selV);
-  var issueId = mag.id + '-' + year + '-' + pad(month);
-  if (issueById(issueId) && !confirm('Diese Ausgabe (' + mag.name + ' · ' + MONTHS[month - 1] + ' ' + year + ') gibt es schon. Ersetzen?')) return;
+  var issueId = bookTitle ? 'buch-' + slug(bookTitle) : mag.id + '-' + year + '-' + pad(month);
+  if (issueById(issueId) && !confirm('Diese Ausgabe (' + (bookTitle || mag.name + ' · ' + MONTHS[month - 1] + ' ' + year) + ') gibt es schon. Ersetzen?')) return;
 
   U.busy = true;
   var go = $('#fGo', panel), prog = $('#prog', panel), bar = $('#pbar', panel), txt = $('#ptxt', panel);
@@ -5036,16 +5069,16 @@ async function processUpload() {
     var sample = parsePages(sampleStr, N);
     await DB.put('mags', mag);
     var genre = (($('#fGenre', panel) || {}).value || '').trim();
-    await DB.put('issues', { genre: genre || undefined, id: issueId, magId: mag.id, year: year, month: month, price: price, samplePages: sample, freePages: sample.length, teaser: teaser, pageCount: N, totalPages: total, aspect: aspect, cover: coverBlob, thumbs: 1, added: Date.now() });
+    await DB.put('issues', { title: bookTitle || undefined, genre: genre || undefined, id: issueId, magId: mag.id, year: year, month: month, price: price, samplePages: sample, freePages: sample.length, teaser: teaser, pageCount: N, totalPages: total, aspect: aspect, cover: coverBlob, thumbs: 1, added: Date.now() });
     await loadData();
-    S.magId = mag.id; S.year = year; S.view = 'swipe';
+    S.magId = mag.id; S.year = year; S.view = 'swipe'; S.kind = mag.kind || 'mag'; S.cat = 'all';
     S.kIndex = Math.max(0, issuesOf(mag.id, year).findIndex(function (x) { return x.id === issueId; }));
     if (S.screen !== 'kiosk') { R = null; S.screen = 'kiosk'; }
     S.kIn = true;
     if (U.newLogoURL) URL.revokeObjectURL(U.newLogoURL);
     U = { file: null, buf: null, pages: 0, busy: false };
     render(); renderPanel(); panel.scrollTop = 0;
-    toast(mag.name + ' · ' + MONTHS[month - 1] + ' ' + year + ' ist im Kiosk');
+    toast(bookTitle ? bookTitle + ' ist im Kiosk' : mag.name + ' · ' + MONTHS[month - 1] + ' ' + year + ' ist im Kiosk');
   } catch (err) {
     console.error(err);
     U.busy = false;
