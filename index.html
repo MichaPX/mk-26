@@ -931,7 +931,7 @@ body.full .sheet{padding-bottom:calc(28px + env(safe-area-inset-bottom))}
 /* ================= Grundlagen ================= */
 var MONTHS = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
 var STEP = 186;
-var APP_BUILD = '24.11.2026 14:20';
+var APP_BUILD = '24.11.2026 14:33';
 var ZOOM = 1;
 var NOW = new Date();
 var app = document.getElementById('app');
@@ -1251,7 +1251,9 @@ function magsOfKind() { fixKind(); var k = S.kind; return S.mags.filter(function
 function isBookKind(k) { return k === 'book' || k === 'comic'; }
 function genreOf(it) { var m = magById(it.magId) || {}; return it.genre || m.cat || ''; }
 function catList() {
-  var out = [], seen = {}, add = function (n) { var k = catKey(n); if (k && !seen[k]) { seen[k] = 1; out.push({ key: k, name: n }); } };
+  // Kategorien, die nur den Bereich wiederholen („Comics“ unter Comics), zählen nicht
+  var same = { zeitschrift: 1, zeitschriften: 1, magazin: 1, magazine: 1, buch: 1, bucher: 1, buecher: 1, comic: 1, comics: 1 };
+  var out = [], seen = {}, add = function (n) { var k = catKey(n); if (k && !seen[k] && !same[k.replace(/-/g, '')]) { seen[k] = 1; out.push({ key: k, name: n }); } };
   if (isBookKind(S.kind)) magsOfKind().forEach(function (m) { issuesOf(m.id).forEach(function (it) { add(genreOf(it)); }); });   // Bücher/Comics: nach Genre
   else magsOfKind().forEach(function (m) { add(m.cat); });
   return out;
@@ -1728,7 +1730,7 @@ function kioskHTML() {
   var kh = kindsHere(); fixKind();
   if (kh.length > 1) h += '<div class="kinds noscroll" role="tablist" aria-label="Bereich">' + kh.map(function (k) { return [k, { mag: 'Zeitschriften', book: 'Bücher', comic: 'Comics' }[k]]; }).map(function (k) { var on = S.kind === k[0]; return '<button class="bare' + (on ? ' on' : '') + '" role="tab" aria-selected="' + on + '" data-act="kind" data-arg="' + k[0] + '">' + k[1] + '</button>'; }).join('') + '</div>';
   var cats = catList();
-  if (cats.length > 1 || (isBookKind(S.kind) && cats.length)) {
+  if (cats.length > 1) {
     var tile = function (key, name, url) {
       return '<button class="bare cat' + (url ? ' img' : '') + (S.cat === key ? ' on' : '') + '" data-act="cat" data-arg="' + esc(key) + '" aria-pressed="' + (S.cat === key) + '">' +
         (url ? '<img src="' + url + '" alt=""><span class="sh"></span>' : (key === 'all' ? '<span class="ic">' + ICON.grid + '</span>' : '')) + '<b>' + esc(name) + '</b></button>';
