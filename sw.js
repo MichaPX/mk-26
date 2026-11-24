@@ -3,8 +3,8 @@
    - Katalog aus Supabase: erst Netz, sonst letzter Stand
    - Seitenbilder, Cover, Logos: aus dem Zwischenspeicher, im Hintergrund aktualisiert
      → bereits angesehene Hefte sind offline lesbar */
-var VERSION = 'kiosk-v1';
-var SHELL = ['./', './index.html', './config.js', './manifest.webmanifest', './icon-192.png'];
+var VERSION = 'kiosk-v2';
+var SHELL = ['./', './index.html', './config.js', './manifest.webmanifest?v=2', './icon-192.png?v=2'];
 
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(VERSION).then(function (c) { return c.addAll(SHELL); }).then(function () { return self.skipWaiting(); }));
