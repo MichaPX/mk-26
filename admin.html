@@ -222,6 +222,11 @@ body.full .lgsel select{font-size:13.5px!important;height:30px}
   box-shadow:0 0 0 .5px rgba(0,0,0,.4),2px 0 3px rgba(0,0,0,.25);transition:transform .22s cubic-bezier(.2,.8,.2,1);touch-action:pan-y;user-select:none;-webkit-user-select:none;color:var(--ink)}
 .lsp::after{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:rgba(255,255,255,.25);border-radius:2px 2px 0 0}
 .lsp .t{position:absolute;inset:28px 0 24px;display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;transform:rotate(180deg);font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;overflow:hidden}
+.lsp.k-book{border-radius:3px 3px 1px 1px;box-shadow:inset 3px 0 0 rgba(255,255,255,.12),inset -3px 0 0 rgba(0,0,0,.18)}
+.lsp.k-book::after{content:"";position:absolute;left:0;right:0;top:14px;height:3px;background:rgba(255,255,255,.35);box-shadow:0 calc(var(--sh) - 34px) 0 rgba(255,255,255,.35);pointer-events:none}
+.lsp.k-book .t{inset:22px 0 22px;font-size:12px;font-weight:750;letter-spacing:.06em}
+.lsp.k-book .lg,.lsp.k-comic .lg{top:auto;bottom:8px;height:auto;aspect-ratio:1;max-height:calc(var(--sw) - 6px)}
+.lsp.k-comic .t{inset:10px 0 26px;font-size:8px}
 .lsp .t i{font-style:normal;font-weight:600;letter-spacing:.04em;opacity:.85;margin-top:8px}
 .lsp .lg{position:absolute;top:7px;left:50%;width:calc(var(--sw) - 5px);height:15px;transform:translateX(-50%);border-radius:2px;background:var(--ink);display:flex;align-items:center;justify-content:center;font-size:5.5px;font-weight:900;color:var(--sc);overflow:hidden}
 .lsp .lg img{width:100%;height:100%;object-fit:contain;background:#fff}
@@ -917,7 +922,7 @@ var PDF_WORKER_B64 = "LyoqCiAqIEBsaWNzdGFydCBUaGUgZm9sbG93aW5nIGlzIHRoZSBlbnRpcm
 /* ================= Grundlagen ================= */
 var MONTHS = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
 var STEP = 186;
-var APP_BUILD = '24.11.2026 12:30';
+var APP_BUILD = '24.11.2026 13:20';
 var ZOOM = 1;
 var NOW = new Date();
 var app = document.getElementById('app');
@@ -1310,6 +1315,7 @@ async function loadData() {
   S.slides = Object.keys(ADS).filter(function (k) { return k.indexOf('bslide:') === 0; }).map(function (k) {
     var b = Object.assign({}, ADS[k], { key: k });
     if (b.media) b.mediaURL = fileURL(b.media);
+    if (b.poster) b.posterURL = fileURL(b.poster);
     return b;
   }).filter(function (b) { return b.mediaURL; }).sort(function (a, b) { return (a.order || 0) - (b.order || 0) || (a.created || 0) - (b.created || 0); });
   for (var ak of ['banner', 'native', 'page', 'brand']) {
@@ -1469,7 +1475,7 @@ function adBanner() {
     S.bIndex = Math.min(S.bIndex, sl.length - 1);
     return '<div class="banner" style="' + bh + '"><div class="adlabel">Anzeige</div><div class="bslides" id="bslides"><div class="btrack noscroll" id="btrack">' + sl.map(function (b, i) {
       var media = b.kind === 'video'
-        ? '<span class="bvid" data-vkey="' + esc(b.key) + '" data-src="' + esc(b.mediaURL) + '"></span>'
+        ? '<span class="bvid" data-vkey="' + esc(b.key) + '" data-src="' + esc(b.mediaURL) + '" data-poster="' + esc(b.posterURL || '') + '"' + (b.posterURL ? ' style="background:#000 url(\'' + esc(b.posterURL) + '\') center/cover"' : '') + '></span>'
         : '<img src="' + esc(b.mediaURL) + '" alt="" draggable="false">';
       return '<button class="bslide" data-act="slidelink" data-arg="' + esc(b.key) + '" aria-label="Anzeige ' + (i + 1) + ' von ' + sl.length + '">' + media + '</button>';
     }).join('') + '</div>' + (sl.length > 1 ? '<div class="bdots" id="bdots">' + sl.map(function (b, i) { return '<span' + (i === S.bIndex ? ' class="on"' : '') + '></span>'; }).join('') + '</div>' : '') + '</div></div>';
@@ -1492,7 +1498,7 @@ function setupBanner() {
   var showDots = function () { $$('#bdots span').forEach(function (d, i) { d.classList.toggle('on', i === S.bIndex); }); };
   // Video-Elemente überleben Neuaufbauten der Seite: kein Neuladen, kein Neustart bei jedem Antippen
   Object.keys(VCACHE).forEach(function (k) { if (!sl.some(function (b) { return b.key === k; })) { try { VCACHE[k].pause(); VCACHE[k].removeAttribute('src'); VCACHE[k].load(); } catch (e) {} delete VCACHE[k]; } });
-  $$('.bvid', tr).forEach(function (ph) { var v = bannerVideo(ph.getAttribute('data-vkey'), ph.getAttribute('data-src'), sl.length === 1); ph.appendChild(v); });
+  $$('.bvid', tr).forEach(function (ph) { var v = bannerVideo(ph.getAttribute('data-vkey'), ph.getAttribute('data-src'), sl.length === 1); var po = ph.getAttribute('data-poster'); if (po && v.getAttribute('poster') !== po) v.setAttribute('poster', po); ph.appendChild(v); });
   var lastIdx = BR.playIdx;
   var playCur = function (restart) {
     $$('.bslide', tr).forEach(function (sd, i) {
@@ -1534,6 +1540,47 @@ function setupBanner() {
   startVideoWatch();
 }
 /* ---- Banner-Videos robust abspielen ---- */
+/* MP4 „schnellstartfähig“ machen: Inhaltsverzeichnis (moov) vor die Videodaten (mdat) legen.
+   Sonst muss das Handy erst das ganze Video laden, bevor es startet. Läuft komplett im Browser. */
+function mp4Faststart(buf) {
+  var dv = new DataView(buf), n = buf.byteLength, boxes = [], off = 0, tp = function (d, o) { return String.fromCharCode(d.getUint8(o), d.getUint8(o + 1), d.getUint8(o + 2), d.getUint8(o + 3)); };
+  while (off + 8 <= n) {
+    var sz = dv.getUint32(off), t = tp(dv, off + 4);
+    if (sz === 1) sz = Number(dv.getBigUint64(off + 8)); else if (sz === 0) sz = n - off;
+    if (sz < 8 || off + sz > n) return null;
+    boxes.push({ t: t, o: off, s: sz }); off += sz;
+  }
+  var mi = boxes.findIndex(function (b) { return b.t === 'moov'; }), di = boxes.findIndex(function (b) { return b.t === 'mdat'; });
+  if (mi < 0 || di < 0 || mi < di) return null;   // schon in Ordnung (oder kein MP4)
+  var moov = new Uint8Array(buf.slice(boxes[mi].o, boxes[mi].o + boxes[mi].s)), md = new DataView(moov.buffer), shift = boxes[mi].s;
+  var CONT = { moov: 1, trak: 1, mdia: 1, minf: 1, stbl: 1, edts: 1, dinf: 1, mvex: 1 };
+  function walk(p, end) {
+    while (p + 8 <= end) {
+      var s = md.getUint32(p), t = tp(md, p + 4); if (s < 8) return false;
+      if (CONT[t]) { if (walk(p + 8, p + s) === false) return false; }
+      else if (t === 'stco') { var c = md.getUint32(p + 12); for (var i = 0; i < c; i++) { var v = md.getUint32(p + 16 + i * 4) + shift; if (v > 0xFFFFFFFF) return false; md.setUint32(p + 16 + i * 4, v); } }
+      else if (t === 'co64') { var c2 = md.getUint32(p + 12); for (var j = 0; j < c2; j++) md.setBigUint64(p + 16 + j * 8, md.getBigUint64(p + 16 + j * 8) + BigInt(shift)); }
+      p += s;
+    }
+  }
+  if (walk(8, moov.length) === false) return null;
+  var parts = [];
+  boxes.forEach(function (b, i) { if (i === di) parts.push(moov); if (i !== mi) parts.push(new Uint8Array(buf, b.o, b.s)); });
+  return new Blob(parts, { type: 'video/mp4' });
+}
+/* erstes Bild des Videos als Vorschaubild – wird sofort gezeigt, bis das Video läuft */
+function videoPoster(blob) {
+  return new Promise(function (res) {
+    var v = document.createElement('video'), url = URL.createObjectURL(blob), done = function (b) { URL.revokeObjectURL(url); res(b); };
+    v.muted = true; v.playsInline = true; v.preload = 'auto'; v.src = url;
+    var to = setTimeout(function () { done(null); }, 8000);
+    v.addEventListener('loadeddata', function () { try { v.currentTime = Math.min(0.1, (v.duration || 1) / 2); } catch (e) {} });
+    v.addEventListener('seeked', function () {
+      try { var w = Math.min(1200, v.videoWidth), c = document.createElement('canvas'); c.width = w; c.height = Math.round(v.videoHeight * w / v.videoWidth); c.getContext('2d').drawImage(v, 0, 0, c.width, c.height); c.toBlob(function (b) { clearTimeout(to); done(b); }, 'image/jpeg', 0.8); } catch (e) { clearTimeout(to); done(null); }
+    }, { once: true });
+    v.addEventListener('error', function () { clearTimeout(to); done(null); });
+  });
+}
 var VCACHE = {};
 function bannerVideo(key, src, loop) {
   var v = VCACHE[key];
@@ -1766,6 +1813,7 @@ function spineCol(it) {
 function magShort(m) { var n = (m && m.name || '?').replace(/[^A-Za-z0-9ÄÖÜäöü& ]/g, ''); var p = n.split(/\s+/).filter(Boolean); return (p.length > 1 ? p.map(function (x) { return x[0]; }).join('') : n.slice(0, 3)).toUpperCase().slice(0, 4); }
 function spineHTML(it, extra, style) {
   var m = magById(it.magId) || {}, c = spineCol(it), logo = S.logos && S.logos[it.magId];
+  if ((m.kind || 'mag') !== 'mag') return '<span class="t">' + esc(m.name || '') + '</span>' + (logo ? '<span class="lg"><img src="' + logo + '" alt=""></span>' : '');
   return '<span class="lg">' + (logo ? '<img src="' + logo + '" alt="">' : esc(magShort(m))) + '</span><span class="t">' + esc(m.name || '') + '<i>' + MSH[it.month - 1] + ' ' + String(it.year).slice(2) + '</i></span><span class="no">' + ('0' + it.month).slice(-2) + '</span><span class="nd" aria-hidden="true"></span>';
 }
 function kindOf(it) { var m = magById(it.magId); return (m && m.kind) || 'mag'; }
@@ -1788,16 +1836,18 @@ function libShelfHTML(lib) {
     var list = groups[k];
     list.sort(function (a, b) { return G === 'year' ? (String(a.magId).localeCompare(String(b.magId)) || b.month - a.month) : (b.year - a.year || b.month - a.month); });
     var rows = [[]], w = 0;
-    list.forEach(function (it) { var pc = it.totalPages || it.pageCount || 100; it._sw = Math.max(12, Math.min(22, Math.round(13 + (pc - 70) / 9))); if (w + it._sw + 1 > maxW && rows[rows.length - 1].length) { rows.push([]); w = 0; } rows[rows.length - 1].push(it); w += it._sw + 1; });
-    h += '<div class="lshelf" id="lg' + gi + '"><div class="lab">' + esc(k) + ' <span>· ' + list.length + (list.length === 1 ? ' Heft' : ' Hefte') + '</span></div>';
+    list.forEach(function (it) { var pc = it.totalPages || it.pageCount || 100, kd = kindOf(it);
+      // Buch: dick und kleiner · Comic: groß und dünn · Heft wie bisher
+      it._sw = kd === 'book' ? Math.max(26, Math.min(44, Math.round(22 + pc / 18))) : kd === 'comic' ? Math.max(9, Math.min(16, Math.round(8 + pc / 20))) : Math.max(12, Math.min(22, Math.round(13 + (pc - 70) / 9))); if (w + it._sw + 1 > maxW && rows[rows.length - 1].length) { rows.push([]); w = 0; } rows[rows.length - 1].push(it); w += it._sw + 1; });
+    h += '<div class="lshelf" id="lg' + gi + '"><div class="lab">' + esc(k) + ' <span>· ' + list.length + (list.length === 1 ? ' Titel' : ' Titel') + '</span></div>';
     rows.forEach(function (row, ri) {
       var last = ri === rows.length - 1, rw = row.reduce(function (a, it) { return a + it._sw + 1; }, 0);
       h += '<div class="lrow">';
       row.forEach(function (it, idx) {
-        var c = spineCol(it), sh = (document.body.classList.contains('tablet') ? 222 : 186) + (it.month % 3) * 3;
+        var c = spineCol(it), kd = kindOf(it), sh = Math.round((document.body.classList.contains('tablet') ? 222 : 186) * (kd === 'book' ? 0.78 : kd === 'comic' ? 1.06 : 1)) + (it.month % 3) * 3;
         var lean = last && idx === row.length - 1 && row.length > 1 && rw < maxW - 30;
         var m = magById(it.magId) || {};
-        h += '<button class="lsp' + (lean ? ' lean' : '') + (marksOf(it).length ? ' mark' : '') + (isReadIt(it) ? '' : ' unread') + '" data-spine="' + esc(it.id) + '" aria-label="' + esc(m.name || '') + ' ' + label(it) + ' aus dem Regal nehmen" style="--sw:' + it._sw + 'px;--sh:' + sh + 'px;--sc:' + c.bg + ';--ink:' + c.ink + '">' + spineHTML(it) + '</button>';
+        h += '<button class="lsp k-' + kd + (lean ? ' lean' : '') + (marksOf(it).length ? ' mark' : '') + (isReadIt(it) ? '' : ' unread') + '" data-spine="' + esc(it.id) + '" aria-label="' + esc(m.name || '') + ' ' + label(it) + ' aus dem Regal nehmen" style="--sw:' + it._sw + 'px;--sh:' + sh + 'px;--sc:' + c.bg + ';--ink:' + c.ink + '">' + spineHTML(it) + '</button>';
       });
       h += (last ? '<div class="lbookend"></div>' : '') + '</div><div class="lboard"></div>';
     });
@@ -1820,7 +1870,7 @@ function libBarHTML(lib, keys) {
   return libBarRest(h, vsw, keys, G);
 }
 function vswHTML() {
-  return '<div class="lsw" role="radiogroup" aria-label="Ansicht">' + [['grid', 'Raster'], ['shelf', 'Regal'], ['rack', 'Ständer'], ['kiosk', 'Kiosk']].map(function (v) { return '<button class="bare' + ((S.libView || 'grid') === v[0] ? ' on' : '') + '" data-act="libview" data-arg="' + v[0] + '">' + v[1] + '</button>'; }).join('') + '</div>';
+  return '<div class="lsw" role="radiogroup" aria-label="Ansicht">' + [['grid', 'Raster'], ['shelf', 'Regal'], ['kiosk', 'Kiosk']].map(function (v) { return '<button class="bare' + ((S.libView || 'grid') === v[0] ? ' on' : '') + '" data-act="libview" data-arg="' + v[0] + '">' + v[1] + '</button>'; }).join('') + '</div>';
 }
 function libBarRest(h, vsw, keys, G) {
   var spatial = S.libView === 'shelf' || S.libView === 'rack';
@@ -2147,11 +2197,11 @@ function libraryHTML() {
   var lib = S.issues.filter(inLib).sort(function (a, b) { return b.year - a.year || b.month - a.month; });
   var h = '<div class="page noscroll" id="kpage" style="animation:fade .25s ease">';
   h += header('Bibliothek', lib.length === 1 ? '1 Ausgabe' : lib.length + ' Ausgaben');
-  S.libView = S.libView || 'grid'; S.libGroup = S.libGroup || S.settings.libGroup || 'year';
+  S.libView = S.libView || 'grid'; if (S.libView === 'rack') S.libView = 'kiosk';   // Ständer und Kiosk zusammengelegt S.libGroup = S.libGroup || S.settings.libGroup || 'year';
   if (lib.length) {
     // Regal = Bücher & Comics, Ständer/Kiosk = Zeitschriften, Raster = alles
     var vl = S.libView === 'shelf' ? lib.filter(isBookish) : (S.libView === 'rack' || S.libView === 'kiosk') ? lib.filter(function (it) { return !isBookish(it); }) : lib;
-    if (vl !== lib && !vl.length) return h + libBarHTML(vl, []) + '<div class="lempty">' + (S.libView === 'shelf' ? 'Im Regal stehen deine Bücher und Comics.<br>Du hast noch keine.' : 'Hier stehen deine Zeitschriften.<br>Du hast noch keine.') + '</div></div>';
+    if (vl !== lib && !vl.length) return h + libBarHTML(vl, []) + '<div class="lempty">' + (S.libView === 'shelf' ? 'Im Regal stehen deine Bücher und Comics.<br>Du hast noch keine.' : 'Im Kiosk stehen deine Zeitschriften.<br>Du hast noch keine.') + '</div></div>';
     var sh = S.libView === 'shelf' ? libShelfHTML(vl) : S.libView === 'rack' ? libRackHTML(vl) : S.libView === 'kiosk' ? libRackHTML(vl, true) : null;
     h += libBarHTML(vl, sh && sh.keys);
     if (sh) return h + sh.html + '</div>';
@@ -4248,7 +4298,7 @@ function renderPanel() {
     '<label class="ck">Hintergrund im Hell-Modus<input type="color" id="cBgL" value="' + esc(themeBg('light')) + '"></label>' +
     '<div class="pf" style="margin-top:8px"><label for="cLook">Standard-Darstellung der App</label><select id="cLook">' + [['system', 'Automatisch (wie das Gerät)'], ['light', 'Hell'], ['dark', 'Dunkel']].map(function (o) { return '<option value="' + o[0] + '"' + ((S.cfg.look || 'system') === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></div>' +
     '<div class="help">Leser können das im Menü unter „Darstellung“ selbst umstellen.</div>' +
-    '<div class="pf" style="margin-top:8px"><label for="cRack">Zeitschriftenständer in der Bibliothek</label><select id="cRack">' + [['auto', 'Passend zu den App-Farben'], ['wood', 'Holz'], ['metal', 'Metall'], ['dark', 'Dunkel (Anthrazit)']].map(function (o) { return '<option value="' + o[0] + '"' + ((S.cfg.rackMat || 'wood') === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></div>' +
+    '<div class="pf" style="margin-top:8px"><label for="cRack">Kiosk-Regal in der Bibliothek (Farbe)</label><select id="cRack">' + [['auto', 'Passend zu den App-Farben'], ['wood', 'Holz'], ['metal', 'Metall'], ['dark', 'Dunkel (Anthrazit)']].map(function (o) { return '<option value="' + o[0] + '"' + ((S.cfg.rackMat || 'wood') === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></div>' +
     '<label class="ck">Akzentfarbe (Buttons, Markierungen)<input type="color" id="cAccent" value="' + esc(S.cfg.accent) + '"></label>' +
     '<label class="ck">Akzent folgt der Farbe des Magazins<input type="checkbox" id="cMagAcc"' + (S.cfg.magAccent ? ' checked' : '') + '></label>' +
     '<div class="help" style="margin-top:4px">Schrift- und Flächenfarben passen sich automatisch an hellen oder dunklen Hintergrund an.</div></div>';
@@ -4389,9 +4439,13 @@ function bindPanel() {
         if (kind === 'video') {
           if (f.size > 30 * 1024 * 1024) { alert('Das Video ist ' + Math.round(f.size / 1048576) + ' MB groß. Bitte höchstens 30 MB (kürzer oder stärker komprimiert).'); continue; }
           blob = f.type ? f : new Blob([f], { type: 'video/mp4' });
+          busy.textContent = 'Video wird für schnellen Start vorbereitet …';
+          try { var fs = mp4Faststart(await blob.arrayBuffer()); if (fs) blob = fs; } catch (e) { console.warn(e); }
+          var poster = await videoPoster(blob);
         } else blob = await resizeImage(f, 1600, 'image/jpeg');
         busy.textContent = 'Lade hoch … ' + (kind === 'video' ? Math.round(f.size / 1048576) + ' MB' : '');
-        await DB.put('ads', { media: blob, kind: kind, order: base + n, created: Date.now() }, 'bslide:' + Date.now().toString(36) + n);
+        var rec = { media: blob, kind: kind, order: base + n, created: Date.now() }; if (kind === 'video' && poster) rec.poster = poster;
+        await DB.put('ads', rec, 'bslide:' + Date.now().toString(36) + n);
         n++;
       }
       busy.textContent = '';
@@ -4605,7 +4659,7 @@ function bindPanel() {
   });
   $('#cBg', panel).addEventListener('input', function (e) { S.cfg.bg = e.target.value; S.settings.look = 'dark'; savePrefs(); applyTheme(); });
   $('#cBgL', panel).addEventListener('input', function (e) { S.cfg.bgLight = e.target.value; S.settings.look = 'light'; savePrefs(); applyTheme(); });
-  $('#cRack', panel).addEventListener('change', function (e) { S.cfg.rackMat = e.target.value; savePrefs(); applyTheme(); if (S.screen !== 'library') { S.screen = 'library'; S.libView = 'rack'; } rerender(); });
+  $('#cRack', panel).addEventListener('change', function (e) { S.cfg.rackMat = e.target.value; savePrefs(); applyTheme(); if (S.screen !== 'library') { S.screen = 'library'; S.libView = 'kiosk'; } rerender(); });
   $('#cLook', panel).addEventListener('change', function (e) { S.cfg.look = e.target.value; delete S.settings.look; savePrefs(); applyTheme(); rerender(); });
   $('#cAccent', panel).addEventListener('input', function (e) { S.cfg.accent = e.target.value; savePrefs(); applyTheme(); });
   $('#cMagAcc', panel).addEventListener('change', function (e) { S.cfg.magAccent = e.target.checked; savePrefs(); applyTheme(); });
