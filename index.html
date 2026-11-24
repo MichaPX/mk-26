@@ -368,7 +368,7 @@ details.imag[open] > .imsum::before{transform:rotate(90deg)}
 .psec.fold.closed>*:not(h2){display:none!important}
 .psec.fold.closed{padding-bottom:4px}
 .imove{display:flex;align-items:center;gap:8px;margin:10px 0 2px;font-size:12px;color:#6B6B73;font-weight:600}
-.imove select{flex:1;min-width:0;height:32px;font-size:13px;padding:0 8px;border-radius:8px}
+.imove select,.imove input{flex:1;min-width:0;height:32px;font-size:13px;padding:0 8px;border-radius:8px}
 .inew{background:#F6F6F8;border-radius:10px;padding:10px;margin:6px 0}
 /* ===== Admin-Oberfläche (Pixel-Mania) ===== */
 body.adm{background:#F3F4F7;color:#1B2333;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
@@ -427,6 +427,18 @@ body.adm .phone{box-shadow:0 18px 40px rgba(0,0,0,.22),inset 0 0 0 2px #2C2C30}
 .dl b{display:block;font-size:13px}.dl small{font-size:12px;color:#5A6478}
 @media (max-width:1280px){body.adm .stage{grid-template-columns:230px minmax(0,1fr) 300px}}
 @media (max-width:1000px){body.adm .stage{grid-template-columns:200px minmax(0,1fr)}#admprev{display:none}}
+/* Kiosk kompakter: Text und Knöpfe kleiner, damit das Heft im Karussell größer wird (iPhone) */
+body:not(.tablet) .kinds{padding:10px 16px 0;gap:5px}
+body:not(.tablet) .kinds button{height:30px;padding:0 14px;font-size:13px;border-radius:15px}
+body:not(.tablet) .cat{height:50px}
+body:not(.tablet) .info{gap:3px;padding-top:0}
+body:not(.tablet) .info .kick{font-size:10px}
+body:not(.tablet) .info h2{font-size:21px}
+body:not(.tablet) .info .teaser{-webkit-line-clamp:1;font-size:12.5px;line-height:1.35}
+body:not(.tablet) .info p{font-size:12.5px}
+body:not(.tablet) .cta{margin-top:5px;gap:8px}
+body:not(.tablet) .cta .pbtn,body:not(.tablet) .cta .sbtn{height:40px;font-size:14px}
+body:not(.tablet) .cta .roundbtn,body:not(.tablet) .cta .savebtn{width:40px;height:40px;flex:0 0 40px}
 .lfly{position:absolute;left:0;top:0;transform-origin:0 0;border-radius:2px 5px 5px 2px;background-size:cover;background-position:center;box-shadow:0 26px 50px rgba(0,0,0,.45);will-change:transform}
 .lfly::after{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(90deg,rgba(0,0,0,.3),rgba(255,255,255,.12) 3%,rgba(255,255,255,0) 8%)}
 .lovl{position:absolute;inset:0;z-index:60;pointer-events:none}
@@ -919,7 +931,7 @@ body.full .sheet{padding-bottom:calc(28px + env(safe-area-inset-bottom))}
 /* ================= Grundlagen ================= */
 var MONTHS = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
 var STEP = 186;
-var APP_BUILD = '24.11.2026 13:20';
+var APP_BUILD = '24.11.2026 14:20';
 var ZOOM = 1;
 var NOW = new Date();
 var app = document.getElementById('app');
@@ -1236,15 +1248,25 @@ function catKey(name) { return name ? slug(name) : ''; }
 function kindsHere() { return ['mag', 'comic', 'book'].filter(function (k) { return S.mags.some(function (m) { return (m.kind || 'mag') === k; }); }); }
 function fixKind() { var ks = kindsHere(); if (ks.indexOf(S.kind) < 0) S.kind = ks[0] || 'mag'; }
 function magsOfKind() { fixKind(); var k = S.kind; return S.mags.filter(function (m) { return (m.kind || 'mag') === k; }); }
+function isBookKind(k) { return k === 'book' || k === 'comic'; }
+function genreOf(it) { var m = magById(it.magId) || {}; return it.genre || m.cat || ''; }
 function catList() {
-  var out = [], seen = {};
-  magsOfKind().forEach(function (m) { var k = catKey(m.cat); if (k && !seen[k]) { seen[k] = 1; out.push({ key: k, name: m.cat }); } });
+  var out = [], seen = {}, add = function (n) { var k = catKey(n); if (k && !seen[k]) { seen[k] = 1; out.push({ key: k, name: n }); } };
+  if (isBookKind(S.kind)) magsOfKind().forEach(function (m) { issuesOf(m.id).forEach(function (it) { add(genreOf(it)); }); });   // Bücher/Comics: nach Genre
+  else magsOfKind().forEach(function (m) { add(m.cat); });
   return out;
 }
+function catListAll() {
+  var out = [], seen = {}, add = function (n) { var k = catKey(n); if (k && !seen[k]) { seen[k] = 1; out.push({ key: k, name: n }); } };
+  S.mags.forEach(function (m) { if (isBookKind(m.kind)) issuesOf(m.id).forEach(function (it) { add(genreOf(it)); }); else add(m.cat); });
+  return out;
+}
+function genreOk(it) { return !isBookKind(S.kind) || S.cat === 'all' || catKey(genreOf(it)) === S.cat; }
+function kList() { var l = issuesOf(S.magId, S.year), f = l.filter(genreOk); return f.length ? f : l; }
 function magsInCat() {
   var base = magsOfKind();
   if (S.cat === 'all') return base;
-  var f = base.filter(function (m) { return catKey(m.cat) === S.cat; });
+  var f = isBookKind(S.kind) ? base.filter(function (m) { return issuesOf(m.id).some(function (it) { return catKey(genreOf(it)) === S.cat; }); }) : base.filter(function (m) { return catKey(m.cat) === S.cat; });
   return f.length ? f : base;
 }
 var SALE = { options: 'Kaufoptionen (Einzelkauf + Abos)', single: 'Nur Einzelkauf (Preis anzeigen)', free: 'Gratis' };
@@ -1282,7 +1304,7 @@ function nextIssueText(magId) {
 function saved(it) { return (S.saved || []).indexOf(it.id) >= 0; }
 function inLib(it) { return (saleMode(it) !== 'free' && bought(it)) || saved(it); }
 function label(it) { return MONTHS[it.month - 1] + ' ' + it.year; }
-function num(it) { return 'Ausgabe ' + pad(it.month) + '/' + it.year; }
+function num(it) { var m = magById(it.magId) || {}; if (isBookKind(m.kind)) return genreOf(it) || (m.kind === 'book' ? 'Buch' : 'Comic'); return 'Ausgabe ' + pad(it.month) + '/' + it.year; }
 function cover(it) { return S.covers[it.id] || ''; }
 
 async function loadData() {
@@ -1706,7 +1728,7 @@ function kioskHTML() {
   var kh = kindsHere(); fixKind();
   if (kh.length > 1) h += '<div class="kinds noscroll" role="tablist" aria-label="Bereich">' + kh.map(function (k) { return [k, { mag: 'Zeitschriften', book: 'Bücher', comic: 'Comics' }[k]]; }).map(function (k) { var on = S.kind === k[0]; return '<button class="bare' + (on ? ' on' : '') + '" role="tab" aria-selected="' + on + '" data-act="kind" data-arg="' + k[0] + '">' + k[1] + '</button>'; }).join('') + '</div>';
   var cats = catList();
-  if (cats.length > 1) {
+  if (cats.length > 1 || (isBookKind(S.kind) && cats.length)) {
     var tile = function (key, name, url) {
       return '<button class="bare cat' + (url ? ' img' : '') + (S.cat === key ? ' on' : '') + '" data-act="cat" data-arg="' + esc(key) + '" aria-pressed="' + (S.cat === key) + '">' +
         (url ? '<img src="' + url + '" alt=""><span class="sh"></span>' : (key === 'all' ? '<span class="ic">' + ICON.grid + '</span>' : '')) + '<b>' + esc(name) + '</b></button>';
@@ -1728,7 +1750,7 @@ function kioskHTML() {
     '<div style="flex:1"></div>' +
     '<div class="views" role="group" aria-label="Ansicht"><button class="bare' + (S.view === 'swipe' ? ' on' : '') + '" data-act="view" data-arg="swipe" aria-label="Wischen" aria-pressed="' + (S.view === 'swipe') + '">' + ICON.swipe + '</button>' +
     '<button class="bare' + (S.view === 'grid' ? ' on' : '') + '" data-act="view" data-arg="grid" aria-label="Alle Ausgaben des Jahres" aria-pressed="' + (S.view === 'grid') + '">' + ICON.grid + '</button></div>' + (S.chat ? chatHTML() : '') + '</div>';
-  var list = issuesOf(S.magId, S.year);
+  var list = kList();
   S.kIndex = Math.max(0, Math.min(list.length - 1, S.kIndex));
   h += '<div id="kbody" class="' + (S.kIn ? 'in' : '') + (S.view === 'swipe' ? ' kswipe' : '') + '">';
   S.kIn = false;
@@ -2292,7 +2314,7 @@ function helpHTML() {
   }
   return h;
 }
-function activeIssue() { var l = issuesOf(S.magId, S.year); return l[S.kIndex] || l[0]; }
+function activeIssue() { var l = kList(); return l[S.kIndex] || l[0]; }
 function botName() { return S.cfg.botName || 'Wolly'; }
 function chatHTML() {
   var h = '<button class="wscrim" data-act="chat" aria-label="Chat schließen"></button>';
@@ -2700,7 +2722,7 @@ function setupCarousel() {
 function fitCards(el) {
   var page = $('#kpage'), info = $('#kinfo');
   if (!el || !page || !info) return;
-  var list = issuesOf(S.magId, S.year);
+  var list = kList();
   // Höhe der Info für die höchste Ausgabe reservieren, damit beim Wischen nichts springt
   page.classList.remove('tight');
   var r = fitCardsOnce(el, page, info, list);
@@ -2723,7 +2745,7 @@ function fitCardsOnce(el, page, info, list) {
   var over = bottom - page.clientHeight;
   var want = ch - over;
   var tab = document.body.classList.contains('tablet'), gap = tab ? 28 : 16;
-  ch = Math.round(Math.max(120, Math.min(tab ? 540 : 300, want)));
+  ch = Math.round(Math.max(120, Math.min(tab ? 540 : 340, want)));
   var cw = Math.round(ch * 170 / 241);
   page.style.setProperty('--ch', ch + 'px'); page.style.setProperty('--cw', cw + 'px');
   STEP = cw + gap;
@@ -2776,7 +2798,7 @@ function updateCards() {
   var idx = Math.max(0, Math.min(cards.length - 1, Math.round(x / STEP)));
   if (idx !== S.kIndex) {
     S.kIndex = idx;
-    var list = issuesOf(S.magId, S.year);
+    var list = kList();
     var info = $('#kinfo'); if (info) info.innerHTML = infoHTML(list[idx]);
     $$('#kdots button').forEach(function (b, i) { b.classList.toggle('on', i === idx); });
   }
@@ -3798,7 +3820,8 @@ var ACT = {
     var list = magsInCat();
     var keep = list.some(function (m) { return m.id === S.magId; });
     var id = keep ? S.magId : (list[0] && list[0].id);
-    switchKiosk({ magId: id, year: yearsOf(id)[0], kIndex: 0 });
+    var ysg = yearsOf(id).filter(function (y) { return issuesOf(id, y).some(genreOk); });
+    switchKiosk({ magId: id, year: ysg[0] || yearsOf(id)[0], kIndex: 0 });
   },
   mag: function (id) {
     S.yearMenu = false; S.chat = null; if (id !== S.magId) { var ys = yearsOf(id); switchKiosk({ magId: id, year: ys[0], kIndex: 0 }); } },
@@ -3899,7 +3922,7 @@ var ACT = {
     if (K.justDragged) return;
     i = Number(i);
     if (i !== S.kIndex) { goTo(i); return; }
-    var it = issuesOf(S.magId, S.year)[i];
+    var it = kList()[i];
     openReader(it.id, !owns(it));
   },
   dot: function (i) { goTo(Number(i)); },
@@ -4057,6 +4080,7 @@ function moveRowHTML(it) {
   var all = (S.allMags || S.mags).slice().sort(function (x, y) { return String(x.name).localeCompare(String(y.name), 'de'); });
   var KL = { mag: 'Zeitschrift', book: 'Buch', comic: 'Comic' };
   return '<div class="imove"><span>Gehört zu</span><select data-move="' + esc(it.id) + '">' + all.map(function (mm) { return '<option value="' + esc(mm.id) + '"' + (mm.id === it.magId ? ' selected' : '') + '>' + esc(mm.name) + ' (' + KL[mm.kind || 'mag'] + (mm.cat ? ' · ' + esc(mm.cat) : '') + ')</option>'; }).join('') + '<option value="__new">+ Neuen Titel anlegen …</option></select></div>' +
+    (isBookKind((magById(it.magId) || {}).kind) ? '<div class="imove"><span>Genre</span><input type="text" list="genrelist" data-genre="' + esc(it.id) + '" value="' + esc(it.genre || '') + '" placeholder="z. B. Krimi – zum Filtern im Kiosk"></div>' : '') +
     '<div class="inew" id="inew-' + esc(it.id) + '" hidden><div class="prow"><div class="pf"><label>Name des neuen Titels</label><input type="text" data-nn="' + esc(it.id) + '" placeholder="z. B. Absolute Batman"></div></div>' +
     '<div class="prow"><div class="pf"><label>Bereich</label>' + kindSel('data-nk="' + esc(it.id) + '"', S.admKind || 'mag') + '</div><div class="pf"><label>Kategorie (optional)</label><input type="text" list="catlist" data-nc="' + esc(it.id) + '" placeholder="z. B. Action"></div></div>' +
     '<div class="prow2"><button class="go small" data-nmake="' + esc(it.id) + '">Anlegen &amp; Ausgabe verschieben</button><button class="ghost" data-ncancel="' + esc(it.id) + '">Abbrechen</button></div></div>';
@@ -4161,7 +4185,8 @@ function renderPanel() {
   var h = '<div style="display:flex;align-items:center;gap:10px"><h1 style="flex:1">Redaktion</h1><span style="font-size:12px;color:#6B6B73">' + esc(AUTH.email || '') + '</span><button class="ghost" id="aLogout" style="height:32px">Abmelden</button></div><p class="lead">Magazine als PDF hochladen und die App gestalten. Alles wird in Supabase gespeichert und erscheint sofort in der App – links siehst du die Vorschau.</p>';
 
   h += '<div class="devsw" role="radiogroup" aria-label="Vorschau">' + [['phone', 'Vorschau iPhone'], ['ipad', 'Vorschau iPad']].map(function (o) { return '<button data-dev="' + o[0] + '" class="' + ((S.preview || 'phone') === o[0] ? 'on' : '') + '">' + o[1] + '</button>'; }).join('') + '</div>';
-  h += '<datalist id="catlist">' + catList().map(function (c) { return '<option value="' + esc(c.name) + '">'; }).join('') + '</datalist>';
+  h += '<datalist id="genrelist">' + S.issues.map(function (it) { return it.genre; }).filter(function (g, i, a) { return g && a.indexOf(g) === i; }).concat(['Krimi', 'Thriller', 'Drama', 'Action', 'Fantasy', 'Science-Fiction', 'Romantik', 'Humor', 'Horror', 'Sachbuch', 'Kinder & Jugend', 'Superhelden', 'Manga'].filter(function (g) { return !S.issues.some(function (it) { return it.genre === g; }); })).map(function (g) { return '<option value="' + esc(g) + '">'; }).join('') + '</datalist>';
+  h += '<datalist id="catlist">' + catListAll().map(function (c) { return '<option value="' + esc(c.name) + '">'; }).join('') + '</datalist>';
   /* Neue Ausgabe */
   h += '<div class="psec" style="border-top:0;padding-top:8px;margin-top:16px"><h2>Neue Ausgabe</h2>';
   h += '<div class="dz" id="dz" role="button" tabindex="0"><div style="color:#8A8A92;margin-bottom:6px">' + ICON.upload + '</div><b>PDF oder EPUB hierher ziehen</b>oder klicken zum Auswählen<input type="file" id="fin" accept="application/pdf,.pdf,application/epub+zip,.epub" hidden></div>';
@@ -4175,6 +4200,7 @@ function renderPanel() {
     '<div class="prow"><div class="pf"><label for="fAm">Monatsabo</label><input id="fAm" type="text" value="4,99 € / Monat"></div><div class="pf"><label for="fAy">Jahresabo</label><input id="fAy" type="text" value="49,99 € / Jahr"></div></div></div>';
   h += '<div class="prow"><div class="pf"><label for="fMonth">Monat</label><select id="fMonth">' + MONTHS.map(function (n, i) { return '<option value="' + (i + 1) + '">' + n + '</option>'; }).join('') + '</select></div>' +
     '<div class="pf"><label for="fYear">Jahr</label><input id="fYear" type="number" min="1990" max="2100"></div></div>';
+  h += '<div class="pf"><label for="fGenre">Genre <span style="font-weight:500;color:#8A8A92">(für Bücher &amp; Comics, optional)</span></label><input id="fGenre" type="text" list="genrelist" placeholder="z. B. Krimi, Fantasy, Superhelden"></div>';
   h += '<div class="prow"><div class="pf"><label for="fPrice">Einzelpreis</label><input id="fPrice" type="text" value="5,99 €"></div><div class="pf"><label for="fLim">Seiten übernehmen</label><select id="fLim"><option value="0">Alle Seiten</option><option value="20">Erste 20 (schnell)</option><option value="40">Erste 40</option></select></div></div>';
   h += '<div class="pf"><label for="fSample">Seiten für die Leseprobe</label><input id="fSample" type="text" value="1-6"></div><div class="help">Eine Auswahl aus dem Heft, z. B. <b>1, 4-5, 12-14</b> (Cover, Inhalt, Auszug aus der Titelgeschichte).</div>';
   h += '<div class="pf"><label for="fTeaser">Kurzbeschreibung der Ausgabe (optional)</label><textarea id="fTeaser" placeholder="Worum geht es in dieser Ausgabe? Erscheint im Kiosk und auf der ersten Seite der Leseprobe."></textarea></div>';
@@ -4228,7 +4254,7 @@ function renderPanel() {
   h += '</div>';
 
   /* Kategorien */
-  var cl = catList();
+  var cl = catListAll();
   h += '<div class="psec"><h2>Kategorien (optional)</h2>';
   h += '<div class="help" style="margin-top:0">Optional: Magazine nach Themen gruppieren, z. B. „Games“ und „Hardware“. Dann erscheint über der Magazin-Leiste eine Reihe Bildkacheln zum Filtern. Die Kategorie trägst du beim Magazin ein („Magazin bearbeiten“ → Kategorie).</div>';
   if (cl.length) h += '<div class="adblock"><b>Kachel „Alle“</b>' + imgPick('cat:all', S.catImg.all || '', 'wide') + '</div>';
@@ -4552,6 +4578,14 @@ function bindPanel() {
   $('#bTitle', panel).addEventListener('change', function (e) { saveAd('brand', { title: e.target.value.trim() || null }); });
 
   /* Magazin / Ausgabe bearbeiten */
+  $$('[data-genre]', panel).forEach(function (inp) {
+    inp.addEventListener('change', async function () {
+      var it = issueById(inp.getAttribute('data-genre')); if (!it) return;
+      var g = inp.value.trim(); if ((it.genre || '') === g) return;
+      if (g) it.genre = g; else delete it.genre;
+      await DB.put('issues', it); await loadData(); rerender(); toast(label(it) + ' → Genre ' + (g || 'entfernt'));
+    });
+  });
   $$('[data-move]', panel).forEach(function (sel) {
     sel.addEventListener('change', async function () {
       var id = sel.getAttribute('data-move'), it = issueById(id), v = sel.value, box = $('#inew-' + id, panel);
@@ -4817,7 +4851,7 @@ function restoreForm() {
 }
 function rememberForm() {
   U.form = {};
-  ['fMag', 'fName', 'fKind', 'fCat', 'fColor', 'fAm', 'fAy', 'fMonth', 'fYear', 'fPrice', 'fLim', 'fSample', 'fTeaser'].forEach(function (id) {
+  ['fMag', 'fName', 'fKind', 'fGenre', 'fCat', 'fColor', 'fAm', 'fAy', 'fMonth', 'fYear', 'fPrice', 'fLim', 'fSample', 'fTeaser'].forEach(function (id) {
     var el = $('#' + id, panel); if (!el) return;
     U.form[id] = el.value;
     el.addEventListener('input', function () { U.form[id] = el.value; });
@@ -4881,7 +4915,8 @@ async function processUpload() {
     await pdf.destroy();
     var sample = parsePages(sampleStr, N);
     await DB.put('mags', mag);
-    await DB.put('issues', { id: issueId, magId: mag.id, year: year, month: month, price: price, samplePages: sample, freePages: sample.length, teaser: teaser, pageCount: N, totalPages: total, aspect: aspect, cover: coverBlob, thumbs: 1, added: Date.now() });
+    var genre = (($('#fGenre', panel) || {}).value || '').trim();
+    await DB.put('issues', { genre: genre || undefined, id: issueId, magId: mag.id, year: year, month: month, price: price, samplePages: sample, freePages: sample.length, teaser: teaser, pageCount: N, totalPages: total, aspect: aspect, cover: coverBlob, thumbs: 1, added: Date.now() });
     await loadData();
     S.magId = mag.id; S.year = year; S.view = 'swipe';
     S.kIndex = Math.max(0, issuesOf(mag.id, year).findIndex(function (x) { return x.id === issueId; }));
