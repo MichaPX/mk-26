@@ -365,6 +365,63 @@ details.imag[open] > .imsum::before{transform:rotate(90deg)}
 .imove{display:flex;align-items:center;gap:8px;margin:10px 0 2px;font-size:12px;color:#6B6B73;font-weight:600}
 .imove select{flex:1;min-width:0;height:32px;font-size:13px;padding:0 8px;border-radius:8px}
 .inew{background:#F6F6F8;border-radius:10px;padding:10px;margin:6px 0}
+/* ===== Admin-Oberfläche (Pixel-Mania) ===== */
+body.adm{background:#F3F4F7;color:#1B2333;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+body.adm .stage{display:grid;grid-template-columns:260px minmax(0,1fr) 360px;gap:0;padding:0;height:100vh;align-items:stretch;justify-content:stretch}
+body.adm.nologin .stage{grid-template-columns:1fr;place-items:center}
+body.adm.nologin #admside,body.adm.nologin #admprev{display:none}
+body.adm.nologin .psec{border:0;padding:0;margin:14px 0 0;box-shadow:none}
+body.adm.nologin .panel{grid-column:1;margin:auto;width:420px;max-width:92vw;max-height:none;height:auto;border-radius:18px;box-shadow:0 20px 50px rgba(15,27,51,.12);padding:30px 28px;background:#fff}
+.lbrand{display:flex;align-items:center;gap:10px;color:#1F6FEB;margin-bottom:6px}.lbrand span{font-size:22px;color:#0F1B33}.lbrand b{font-weight:800}
+#admside{background:#0F1B33;color:#C9D2E3;display:flex;flex-direction:column;overflow-y:auto}
+.sbrand{display:flex;align-items:center;gap:10px;padding:22px 22px 20px;border-bottom:1px solid rgba(255,255,255,.08);color:#4C8DFF}
+.sbrand span{color:#fff;font-size:19px;font-weight:500;letter-spacing:-.01em;white-space:nowrap}.sbrand b{font-weight:800}
+.snav{padding:14px 12px;display:flex;flex-direction:column;gap:2px;flex:1}
+.sitem{display:flex;align-items:center;gap:12px;height:46px;padding:0 14px;border:0;border-radius:10px;background:none;color:#C9D2E3;font-size:14.5px;font-weight:550;cursor:pointer;text-align:left;width:100%}
+.sitem:hover{background:rgba(255,255,255,.06);color:#fff}
+.sitem.on{background:#1F6FEB;color:#fff;box-shadow:0 6px 16px rgba(31,111,235,.35)}
+.sitem span{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sitem .chev{width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);margin-top:-3px}
+.ssub{display:flex;flex-direction:column;gap:2px;margin:4px 0 8px 18px;padding-left:10px;border-left:1px solid rgba(255,255,255,.1)}
+.ssub button{border:0;background:none;color:#AEB8CC;text-align:left;font-size:14px;padding:9px 12px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:10px}
+.ssub button::before{content:"";width:5px;height:5px;border-radius:3px;background:currentColor;opacity:.6}
+.ssub button.on{background:rgba(255,255,255,.08);color:#fff}.ssub button.on::before{background:#4C8DFF;opacity:1}
+.sfoot{display:flex;align-items:center;gap:10px;padding:14px 16px;border-top:1px solid rgba(255,255,255,.08)}
+.sfoot .av{width:38px;height:38px;border-radius:19px;background:#5B6CF0;color:#fff;display:grid;place-items:center;font-weight:700;font-size:14px;flex:none}
+.sfoot .who{flex:1;min-width:0;display:flex;flex-direction:column}.sfoot .who b{color:#fff;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sfoot small{font-size:12px;color:#8C97AD}
+.slog{border:1px solid rgba(255,255,255,.18);background:none;color:#C9D2E3;border-radius:8px;height:30px;padding:0 10px;font-size:12px;cursor:pointer}
+body.adm:not(.nologin) .panel{grid-column:2;width:auto;max-height:100vh;height:100vh;border-radius:0;box-shadow:none;background:#F3F4F7;padding:0 28px 60px;overflow-y:auto}
+body.adm .panel > .lead,body.adm .admhdr{display:none}
+#admtop{position:sticky;top:0;z-index:30;background:#F3F4F7;padding:22px 0 14px}
+.atitle{display:flex;align-items:center;gap:14px;color:#1B2333}.atitle h1{margin:0;font-size:30px;font-weight:750;letter-spacing:-.02em}
+.atabs{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+.atabs button{display:flex;align-items:center;gap:10px;height:48px;padding:0 22px;border:0;border-radius:10px;background:#E6E9EF;color:#3A4356;font-size:15px;font-weight:600;cursor:pointer}
+.atabs button:hover{background:#DCE1EA}
+.atabs button.on{background:#1F6FEB;color:#fff;box-shadow:0 6px 16px rgba(31,111,235,.3)}
+body.adm .psec{background:#fff;border:1px solid #E3E6EC;border-radius:14px;padding:24px 26px;margin:10px 0 18px;max-width:1040px;box-shadow:0 1px 2px rgba(15,27,51,.04)}
+body.adm .psec[hidden]{display:none}
+body.adm .psec > h2{font-size:22px;font-weight:700;letter-spacing:-.01em;text-transform:none;color:#1B2333;margin:0 0 16px}
+body.adm .psec > h2::after{display:none}
+body.adm .go{background:#1F6FEB}
+#admprev{grid-column:3;padding:20px 22px 20px 0;overflow-y:auto;display:flex;flex-direction:column;gap:18px}
+.pvcard{background:#fff;border:1px solid #E3E6EC;border-radius:14px;padding:18px 18px 20px}
+.pvhead{display:flex;align-items:center;gap:10px;color:#3A4356;margin-bottom:10px}.pvhead b{font-size:19px;font-weight:650;color:#1B2333}
+#pvdev .devsw{margin:0 0 12px}
+.pvbox{display:flex;justify-content:center}
+body.adm .phone{box-shadow:0 18px 40px rgba(0,0,0,.22),inset 0 0 0 2px #2C2C30}
+#admqa{display:flex;flex-direction:column;border:1px solid #E3E6EC;border-radius:10px;overflow:hidden}
+#admqa button{display:flex;align-items:center;gap:12px;height:48px;padding:0 14px;border:0;border-top:1px solid #EEF0F4;background:#fff;color:#1F6FEB;font-size:14.5px;font-weight:600;cursor:pointer;text-align:left}
+#admqa button:first-child{border-top:0}#admqa button svg{color:#5A6478}#admqa button span{flex:1}#admqa button:hover{background:#F6F8FC}
+.chev.r{width:7px;height:7px;border-right:2px solid #5A6478;border-bottom:2px solid #5A6478;transform:rotate(-45deg)}
+.dgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;max-width:1040px;margin:10px 0 18px}
+.dcard{display:flex;flex-direction:column;align-items:flex-start;gap:4px;background:#fff;border:1px solid #E3E6EC;border-radius:14px;padding:18px 20px;cursor:pointer;text-align:left}
+.dcard small{font-size:13px;color:#5A6478;font-weight:600}.dcard b{font-size:34px;font-weight:750;color:#1B2333;line-height:1.1}.dcard span{font-size:13px;color:#5A6478}
+.dcard.accent{background:#1F6FEB;border-color:#1F6FEB}.dcard.accent *{color:#fff}
+.dlatest{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:16px}
+.dl img{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.12);display:block;margin-bottom:8px}
+.dl b{display:block;font-size:13px}.dl small{font-size:12px;color:#5A6478}
+@media (max-width:1280px){body.adm .stage{grid-template-columns:230px minmax(0,1fr) 300px}}
+@media (max-width:1000px){body.adm .stage{grid-template-columns:200px minmax(0,1fr)}#admprev{display:none}}
 .lfly{position:absolute;left:0;top:0;transform-origin:0 0;border-radius:2px 5px 5px 2px;background-size:cover;background-position:center;box-shadow:0 26px 50px rgba(0,0,0,.45);will-change:transform}
 .lfly::after{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(90deg,rgba(0,0,0,.3),rgba(255,255,255,.12) 3%,rgba(255,255,255,0) 8%)}
 .lovl{position:absolute;inset:0;z-index:60;pointer-events:none}
@@ -857,7 +914,7 @@ body.full .sheet{padding-bottom:calc(28px + env(safe-area-inset-bottom))}
 /* ================= Grundlagen ================= */
 var MONTHS = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
 var STEP = 186;
-var APP_BUILD = '24.11.2026 12:06';
+var APP_BUILD = '24.11.2026 12:30';
 var ZOOM = 1;
 var NOW = new Date();
 var app = document.getElementById('app');
@@ -1171,7 +1228,9 @@ async function logoFrom(file) {
   catch (e) { return { blob: blob, aspect: 1, bg: '#FFFFFF' }; }
 }
 function catKey(name) { return name ? slug(name) : ''; }
-function magsOfKind() { var k = S.kind || 'all'; return k === 'all' ? S.mags : S.mags.filter(function (m) { return (m.kind || 'mag') === k; }); }
+function kindsHere() { return ['mag', 'comic', 'book'].filter(function (k) { return S.mags.some(function (m) { return (m.kind || 'mag') === k; }); }); }
+function fixKind() { var ks = kindsHere(); if (ks.indexOf(S.kind) < 0) S.kind = ks[0] || 'mag'; }
+function magsOfKind() { fixKind(); var k = S.kind; return S.mags.filter(function (m) { return (m.kind || 'mag') === k; }); }
 function catList() {
   var out = [], seen = {};
   magsOfKind().forEach(function (m) { var k = catKey(m.cat); if (k && !seen[k]) { seen[k] = 1; out.push({ key: k, name: m.cat }); } });
@@ -1179,7 +1238,7 @@ function catList() {
 }
 function magsInCat() {
   var base = magsOfKind();
-  if ((S.kind || 'all') === 'all' || S.cat === 'all') return base;
+  if (S.cat === 'all') return base;
   var f = base.filter(function (m) { return catKey(m.cat) === S.cat; });
   return f.length ? f : base;
 }
@@ -1597,9 +1656,9 @@ function kioskHTML() {
   h += header('__brand', S.mags.length + (S.mags.length === 1 ? ' Magazin' : ' Magazine') + ' · ' + nIss + (nIss === 1 ? ' Ausgabe' : ' Ausgaben'));
   h += adBanner();
   // Bereiche: Alle · Magazine · Bücher · Comics (nur die, die es gibt) – Kategorien erst innerhalb eines Bereichs
-  var kindsHere = ['mag', 'book', 'comic'].filter(function (k) { return S.mags.some(function (m) { return (m.kind || 'mag') === k; }); });
-  if (kindsHere.length > 1) h += '<div class="kinds noscroll" role="tablist" aria-label="Bereich">' + [['all', 'Alle']].concat(kindsHere.map(function (k) { return [k, { mag: 'Magazine', book: 'Bücher', comic: 'Comics' }[k]]; })).map(function (k) { var on = (S.kind || 'all') === k[0]; return '<button class="bare' + (on ? ' on' : '') + '" role="tab" aria-selected="' + on + '" data-act="kind" data-arg="' + k[0] + '">' + k[1] + '</button>'; }).join('') + '</div>';
-  var cats = (S.kind || 'all') === 'all' && kindsHere.length > 1 ? [] : catList();
+  var kh = kindsHere(); fixKind();
+  if (kh.length > 1) h += '<div class="kinds noscroll" role="tablist" aria-label="Bereich">' + kh.map(function (k) { return [k, { mag: 'Zeitschriften', book: 'Bücher', comic: 'Comics' }[k]]; }).map(function (k) { var on = S.kind === k[0]; return '<button class="bare' + (on ? ' on' : '') + '" role="tab" aria-selected="' + on + '" data-act="kind" data-arg="' + k[0] + '">' + k[1] + '</button>'; }).join('') + '</div>';
+  var cats = catList();
   if (cats.length > 1) {
     var tile = function (key, name, url) {
       return '<button class="bare cat' + (url ? ' img' : '') + (S.cat === key ? ' on' : '') + '" data-act="cat" data-arg="' + esc(key) + '" aria-pressed="' + (S.cat === key) + '">' +
@@ -3678,7 +3737,7 @@ var ACT = {
   menu: function () { S.menu = true; S.anim = true; rerender(); },
   closemenu: function () { S.menu = false; rerender(); },
   kind: function (k) {
-    if ((S.kind || 'all') === k) return;
+    if (S.kind === k) return;
     S.kind = k; S.cat = 'all';
     var list = magsInCat(), id = list.some(function (m) { return m.id === S.magId; }) ? S.magId : (list[0] && list[0].id);
     switchKiosk({ magId: id, year: yearsOf(id)[0], kIndex: 0 });
@@ -3957,10 +4016,98 @@ async function moveIssueTo(it, mag) {
   S.admKind = mag.kind || 'mag'; ADMOPEN[mag.id] = true; rerender(); renderPanel();
   toast(label(it) + ' → ' + mag.name);
 }
+/* ===== Admin-Oberfläche: Seitenleiste · Arbeitsbereich · Vorschau (Pixel-Mania) ===== */
+var ADMI = {
+  home: '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>',
+  book: '<path d="M2 5c3-1.5 6-1.5 10 1 4-2.5 7-2.5 10-1v14c-3-1.5-6-1.5-10 1-4-2.5-7-2.5-10-1z"/><path d="M12 6v14"/>',
+  tag: '<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/>',
+  news: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10M7 12h10M7 16h6"/>',
+  ad: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 15l2.5-6 2.5 6M7.8 13h3.4M15 9v6h1.5a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2z"/>',
+  brush: '<path d="M14 4l6 6-9 9H5v-6z"/><path d="M12 6l6 6"/>',
+  cart: '<circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l3 12h11l2-8H6"/>',
+  chat: '<path d="M4 4h16v12H8l-4 4z"/>',
+  gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  up: '<path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v4h16v-4"/>',
+  list: '<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>',
+  eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  bolt: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
+  logo: '<path d="M12 2l10 5-10 5L2 7z" fill="currentColor" opacity=".95"/><path d="M2 12l10 5 10-5" /><path d="M2 17l10 5 10-5"/>'
+};
+function admIc(k, s) { return '<svg width="' + (s || 20) + '" height="' + (s || 20) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' + ADMI[k] + '</svg>'; }
+var ADMPAGES = [
+  { id: 'dash', t: 'Dashboard', ic: 'home', secs: [] },
+  { id: 'issues', t: 'Magazine & Ausgaben', ic: 'book', secs: [['Neue Ausgabe', 'Ausgabe hochladen', 'up'], ['Magazine & Ausgaben', 'Ausgaben verwalten', 'list']] },
+  { id: 'cats', t: 'Kategorien', ic: 'tag', secs: [['Kategorien (optional)', 'Kategorie-Kacheln', 'tag'], ['Magazin-Leiste oben im Kiosk', 'Magazin-Leiste', 'list']] },
+  { id: 'news', t: 'News', ic: 'news', secs: [['News', 'News', 'news']] },
+  { id: 'ads', t: 'Werbung', ic: 'ad', secs: [['Werbung', 'Werbung', 'ad']] },
+  { id: 'design', t: 'Design', ic: 'brush', secs: [['App-Kopf', 'App-Kopf', 'brush'], ['Farben', 'Farben', 'brush']] },
+  { id: 'sales', t: 'Verkauf & Abos', ic: 'cart', secs: [['Kauf & Demo', 'Kauf & Demo', 'cart']] },
+  { id: 'service', t: 'Chatbot & Hilfe', ic: 'chat', secs: [['Chatbot', 'Chatbot', 'chat'], ['Hilfe & Kontakt', 'Hilfe & Kontakt', 'chat']] },
+  { id: 'settings', t: 'Einstellungen', ic: 'gear', secs: [['Speicher', 'Speicher', 'gear']] }
+];
+var ADMSTATE = (function () { try { return JSON.parse(localStorage.getItem('pmAdm') || '{}'); } catch (e) { return {}; } })();
+function admSave() { try { localStorage.setItem('pmAdm', JSON.stringify(ADMSTATE)); } catch (e) {} }
+function admGo(page, tab) { ADMSTATE.page = page; if (tab != null) ADMSTATE['tab_' + page] = tab; admSave(); admLayout(); var pn = $('#panel'); if (pn) pn.scrollTop = 0; }
+function admLayout() {
+  if (!IS_ADMIN) return;
+  document.body.classList.add('adm');
+  var stage = $('.stage'), side = $('#admside'), prev = $('#admprev');
+  document.body.classList.toggle('nologin', !AUTH);
+  if (!side) { side = document.createElement('nav'); side.id = 'admside'; stage.insertBefore(side, stage.firstChild); }
+  if (!prev) {
+    prev = document.createElement('aside'); prev.id = 'admprev';
+    prev.innerHTML = '<div class="pvcard"><div class="pvhead">' + admIc('eye', 22) + '<b>Vorschau</b></div><div id="pvdev"></div><div class="pvbox" id="pvbox"></div></div><div class="pvcard qa"><div class="pvhead">' + admIc('bolt', 20) + '<b>Schnellaktionen</b></div><div id="admqa"></div></div>';
+    stage.appendChild(prev); $('#pvbox').appendChild($('#phone'));
+  }
+  if (!AUTH) { side.innerHTML = ''; if (!$('#panel .lbrand')) { var lb = document.createElement('div'); lb.className = 'lbrand'; lb.innerHTML = admIc('logo', 30) + '<span><b>Pixel-Mania</b> Admin</span>'; $('#panel').insertBefore(lb, $('#panel').firstChild); } return; }
+  var page = ADMSTATE.page || 'issues', P = ADMPAGES.filter(function (p) { return p.id === page; })[0] || ADMPAGES[1];
+  // Seitenleiste
+  var nav = '<div class="sbrand">' + admIc('logo', 28) + '<span><b>Pixel-Mania</b> Admin</span></div><div class="snav">';
+  ADMPAGES.forEach(function (p) {
+    var on = p.id === P.id;
+    nav += '<button class="sitem' + (on ? ' on' : '') + '" data-admgo="' + p.id + '">' + admIc(p.ic) + '<span>' + esc(p.t) + '</span>' + (p.secs.length > 1 ? '<i class="chev"></i>' : '') + '</button>';
+    if (on && p.secs.length > 1) nav += '<div class="ssub">' + p.secs.map(function (s, i) { return '<button class="' + ((ADMSTATE['tab_' + p.id] || 0) === i ? 'on' : '') + '" data-admgo="' + p.id + '" data-admtab="' + i + '">' + esc(s[1]) + '</button>'; }).join('') + '</div>';
+  });
+  var em = AUTH.email || '', ini = (em.replace(/@.*/, '').split(/[._-]/).map(function (x) { return x.charAt(0); }).join('').slice(0, 2) || 'A').toUpperCase();
+  nav += '</div><div class="sfoot"><span class="av">' + esc(ini) + '</span><span class="who"><b>' + esc(em.replace(/@.*/, '')) + '</b><small>Admin</small></span><button class="slog" data-admlogout title="Abmelden">Abmelden</button></div>';
+  side.innerHTML = nav;
+  $$('[data-admgo]', side).forEach(function (b) { b.onclick = function () { admGo(b.getAttribute('data-admgo'), b.hasAttribute('data-admtab') ? +b.getAttribute('data-admtab') : null); }; });
+  $('[data-admlogout]', side).onclick = function () { var lo = $('#aLogout'); if (lo) lo.click(); };
+  var lo0 = $('#aLogout'); if (lo0 && lo0.parentNode) lo0.parentNode.style.display = 'none';
+  // Vorschau-Umschalter in die rechte Spalte holen
+  var dv = $('#panel .devsw'); if (dv) { var pd = $('#pvdev'); pd.innerHTML = ''; pd.appendChild(dv); }
+  // Arbeitsbereich: nur die Abschnitte der aktuellen Seite, als Karten mit Reitern
+  var pn = $('#panel'), secs = $$('#panel > .psec'), known = {};
+  ADMPAGES.forEach(function (p) { p.secs.forEach(function (s) { known[s[0]] = p.id; }); });
+  var tab = Math.min(ADMSTATE['tab_' + P.id] || 0, Math.max(0, P.secs.length - 1)), want = P.secs[tab] ? P.secs[tab][0] : null;
+  secs.forEach(function (sec) {
+    var h2 = sec.querySelector(':scope > h2'), t = h2 ? h2.textContent.trim() : '';
+    var pg = known[t] || 'settings';
+    sec.hidden = !(P.id === pg && (P.id === 'settings' ? true : t === want));
+    sec.classList.remove('closed');
+  });
+  var top = $('#admtop'); if (top) top.remove(); var dash = $('#admdash'); if (dash) dash.remove();
+  top = document.createElement('div'); top.id = 'admtop';
+  top.innerHTML = '<div class="atitle">' + admIc(P.ic, 30) + '<h1>' + esc(P.t) + '</h1></div>' + (P.secs.length > 1 ? '<div class="atabs">' + P.secs.map(function (s, i) { return '<button class="' + (i === tab ? 'on' : '') + '" data-admgo="' + P.id + '" data-admtab="' + i + '">' + admIc(s[2], 18) + esc(s[1]) + '</button>'; }).join('') + '</div>' : '');
+  pn.insertBefore(top, pn.firstChild);
+  $$('[data-admgo]', top).forEach(function (b) { b.onclick = function () { admGo(b.getAttribute('data-admgo'), +b.getAttribute('data-admtab')); }; });
+  if (P.id === 'dash') { dash = document.createElement('div'); dash.id = 'admdash'; dash.innerHTML = admDashHTML(); top.after(dash); $$('[data-admgo]', dash).forEach(function (b) { b.onclick = function () { admGo(b.getAttribute('data-admgo'), b.hasAttribute('data-admtab') ? +b.getAttribute('data-admtab') : null); }; }); }
+  // Schnellaktionen
+  $('#admqa').innerHTML = [['issues', 0, 'up', 'Neue Ausgabe hochladen'], ['issues', 1, 'list', 'Ausgaben verwalten'], ['cats', 0, 'tag', 'Kategorien bearbeiten'], ['ads', 0, 'ad', 'Werbung verwalten'], ['sales', 0, 'cart', 'Preise & Abos']].map(function (q) { return '<button data-admgo="' + q[0] + '" data-admtab="' + q[1] + '">' + admIc(q[2], 18) + '<span>' + q[3] + '</span><i class="chev r"></i></button>'; }).join('');
+  $$('#admqa [data-admgo]').forEach(function (b) { b.onclick = function () { admGo(b.getAttribute('data-admgo'), +b.getAttribute('data-admtab')); }; });
+  fit();
+}
+function admDashHTML() {
+  var all = S.allMags || S.mags, K = { mag: 'Zeitschriften', comic: 'Comics', book: 'Bücher' };
+  var card = function (k) { var ms = S.mags.filter(function (m) { return (m.kind || 'mag') === k; }), n = S.issues.filter(function (it) { var m = magById(it.magId); return m && (m.kind || 'mag') === k; }).length; return '<button class="dcard" data-admgo="issues" data-admtab="1"><small>' + K[k] + '</small><b>' + ms.length + '</b><span>' + (ms.length === 1 ? 'Titel' : 'Titel') + ' · ' + n + (n === 1 ? ' Ausgabe' : ' Ausgaben') + '</span></button>'; };
+  var latest = S.issues.slice().sort(function (a, b) { return (b.added || 0) - (a.added || 0); }).slice(0, 6);
+  return '<div class="dgrid">' + card('mag') + card('comic') + card('book') + '<button class="dcard accent" data-admgo="issues" data-admtab="0"><small>Neu</small><b>' + admIc('up', 26) + '</b><span>Ausgabe hochladen</span></button></div>' +
+    '<div class="psec"><h2>Zuletzt hochgeladen</h2><div class="dlatest">' + (latest.length ? latest.map(function (it) { var m = magById(it.magId) || {}; return '<div class="dl"><img src="' + cover(it) + '" alt=""><b>' + esc(m.name || '') + '</b><small>' + label(it) + '</small></div>'; }).join('') : '<p class="help">Noch nichts hochgeladen.</p>') + '</div></div>';
+}
 function renderPanel() {
   var mags = S.mags;
   var brand = S.ads.brand || {};
-  if (!AUTH) { panel.innerHTML = loginHTML(); bindLogin(); return; }
+  if (!AUTH) { panel.innerHTML = loginHTML(); bindLogin(); admLayout(); return; }
   var h = '<div style="display:flex;align-items:center;gap:10px"><h1 style="flex:1">Redaktion</h1><span style="font-size:12px;color:#6B6B73">' + esc(AUTH.email || '') + '</span><button class="ghost" id="aLogout" style="height:32px">Abmelden</button></div><p class="lead">Magazine als PDF hochladen und die App gestalten. Alles wird in Supabase gespeichert und erscheint sofort in der App – links siehst du die Vorschau.</p>';
 
   h += '<div class="devsw" role="radiogroup" aria-label="Vorschau">' + [['phone', 'Vorschau iPhone'], ['ipad', 'Vorschau iPad']].map(function (o) { return '<button data-dev="' + o[0] + '" class="' + ((S.preview || 'phone') === o[0] ? 'on' : '') + '">' + o[1] + '</button>'; }).join('') + '</div>';
@@ -4133,7 +4280,7 @@ function renderPanel() {
   var st = panel.scrollTop;
   panel.innerHTML = h;
   // Abschnitte zum Auf- und Zuklappen – nur „Neue Ausgabe“ und „Magazine & Ausgaben“ sind anfangs offen
-  $$('.psec > h2', panel).forEach(function (h2) {
+  if (IS_ADMIN) {} else $$('.psec > h2', panel).forEach(function (h2) {
     var key = h2.textContent.trim(), sec = h2.parentNode;
     if (PSOPEN[key] == null) PSOPEN[key] = /Neue Ausgabe|Magazine/.test(key);
     sec.classList.add('fold'); sec.classList.toggle('closed', !PSOPEN[key]);
@@ -4141,13 +4288,14 @@ function renderPanel() {
   });
   // Sprungleiste zu allen Bereichen – oben angeheftet, damit man nicht endlos scrollt
   (function () {
-    var hs = $$('.psec > h2', panel); if (hs.length < 3) return;
+    var hs = $$('.psec > h2', panel); if (IS_ADMIN || hs.length < 3) return;
     var nav = document.createElement('div'); nav.className = 'admnav';
     hs.forEach(function (h2, i) { h2.id = 'adm-s' + i; var b = document.createElement('button'); b.textContent = h2.textContent.replace(/\s*\(optional\)/i, ''); b.onclick = function () { var sec = h2.parentNode, key = h2.textContent.trim(); PSOPEN[key] = true; sec.classList.remove('closed'); h2.scrollIntoView({ behavior: 'smooth', block: 'start' }); }; nav.appendChild(b); });
     var first = hs[0].parentNode; first.parentNode.insertBefore(nav, first);
   })();
   panel.scrollTop = st;
   bindPanel();
+  admLayout();
 }
 
 async function saveNews(key, patch) {
@@ -4712,6 +4860,8 @@ function fit() {
     ph.classList.toggle('ipad', ipad);
     var pw = ipad ? 844 : 414, phh = ipad ? 1204 : 868, side = IS_ADMIN ? 400 + 44 + 48 : 48;
     ZOOM = window.innerWidth <= 920 ? Math.min(1, (window.innerWidth - 24) / pw) : Math.min(1, (window.innerHeight - 40) / phh, (window.innerWidth - side) / pw);
+    var pvb = IS_ADMIN && document.getElementById('pvbox');
+    if (pvb && pvb.clientWidth) ZOOM = Math.min(1, (pvb.clientWidth - 8) / pw, Math.max(260, window.innerHeight - 380) / phh);
     ph.style.zoom = ZOOM;
   }
   if (wasTab !== document.body.classList.contains('tablet') && typeof rerender === 'function' && app.innerHTML) rerender();
