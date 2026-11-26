@@ -1042,7 +1042,7 @@ body.full .sheet{padding-bottom:calc(28px + env(safe-area-inset-bottom))}
 /* ================= Grundlagen ================= */
 var MONTHS = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
 var STEP = 186;
-var APP_BUILD = '26.11.2026 11:31';
+var APP_BUILD = '26.11.2026 11:45';
 var ZOOM = 1;
 var NOW = new Date();
 var app = document.getElementById('app');
@@ -2190,6 +2190,19 @@ function lpEase(t) { return t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3)
 function lpSmooth(a, b, t) { t = Math.max(0, Math.min(1, (t - a) / (b - a))); return t * t * (3 - 2 * t); }
 function lpState(t) {
   var o = LP;
+  if (o.b3) {
+    // 1) Buch oben antippen und nach vorn kippen · 2) gerade aus dem Regal nach oben ziehen · 3) zur Mitte schwenken und zum Cover drehen · 4) leicht nachschwingen
+    var tip = lpSmooth(0, .14, t), up = lpSmooth(.06, .4, t), mv = lpEase(Math.max(0, Math.min(1, (t - .3) / .62))), rot = lpEase(Math.max(0, Math.min(1, (t - .34) / .58)));
+    var settle = t > .9 ? Math.sin((t - .9) / .1 * Math.PI) * (1 - (t - .9) / .1) : 0;
+    var X0 = o.cx, Y0 = o.cy - up * o.H * o.s0 * .62, X1 = o.tx, Y1 = o.ty;
+    var x = X0 + (X1 - X0) * mv, y = Y0 + (Y1 - Y0) * mv - Math.sin(Math.PI * mv) * 26;
+    var s = o.s0 + (1 - o.s0) * mv, ry = 70 * (1 - rot) - settle * 5, rx = -12 * (1 - mv) + tip * (1 - up) * 9 + up * (1 - mv) * 4;
+    var tz = Math.sin(Math.PI * Math.min(1, t * 1.25)) * 40;
+    return {
+      tf: 'translate3d(' + (x - o.W / 2).toFixed(2) + 'px,' + (y - o.H / 2).toFixed(2) + 'px,' + tz.toFixed(1) + 'px) scale(' + s.toFixed(4) + ') rotateX(' + rx.toFixed(2) + 'deg) rotateY(' + ry.toFixed(2) + 'deg)',
+      op: Math.min(1, mv * 1.3), lit: Math.max(0, ry) / 90 * .5
+    };
+  }
   var lift = lpSmooth(0, .32, t) * o.pull;
   var v = lpEase(Math.max(0, Math.min(1, (t - .16) / .84)));
   var x0 = o.cx, y0 = o.cy - lift, x1 = o.tx - o.W / 2, y1 = o.ty;
@@ -2241,21 +2254,24 @@ function pullOut(el, dragged) {
   var it = issueById(el.getAttribute('data-spine')); if (!it) return;
   var sr = app.getBoundingClientRect(), z = sr.width / app.offsetWidth || 1;
   // aktuelle Lage des Rückens (inkl. schon gezogenem Stück) messen, dann zurück auf Ruhelage rechnen
-  var cur = el.getBoundingClientRect(), dragUp = 0;
+  var b3 = el.classList.contains('bk'), cur = (b3 && el.querySelector('.sp') || el).getBoundingClientRect(), dragUp = 0;
   var m = /translateY\((-?[\d.]+)px\)/.exec(el.style.transform || ''); if (m) dragUp = -Number(m[1]);
   var sw = cur.width / z, sh = cur.height / z, cx = (cur.left - sr.left) / z + sw / 2, cy = (cur.top - sr.top) / z + sh / 2 + dragUp;
-  var ar = it.aspect || 1.33, W = Math.min(app.offsetWidth * 0.48, 200), H = W * ar, D = Math.max(sw, 10);
+  var ar = it.aspect || 1.33, W = Math.min(app.offsetWidth * 0.48, 200), H = W * ar, D = b3 ? Math.max(18, Math.min(52, (parseFloat(el.style.getPropertyValue('--w')) || 30) * H / (parseFloat(el.style.getPropertyValue('--h')) || 200))) : Math.max(sw, 10);
   var c = spineCol(it);
   var ov = document.createElement('div'); ov.className = 'lovl on'; ov.id = 'lovl'; ov.style.pointerEvents = 'none';
   setTimeout(function () { ov.style.pointerEvents = ''; }, 550);
   ov.innerHTML = '<div class="lscrim" data-act="putback" style="opacity:0"></div><div class="l3d" id="l3d"><div class="lmag" id="lmag" style="width:' + W + 'px;height:' + H + 'px">' +
     '<div class="f front" style="background-image:url(\'' + cover(it) + '\');transform:translateZ(' + (D / 2) + 'px)"><i class="lit"></i></div>' +
-    '<div class="f" style="left:' + ((W - D) / 2) + 'px;top:0;width:' + D + 'px;height:' + H + 'px;transform:rotateY(-90deg) translateZ(' + (W / 2) + 'px)"><div class="lsp" style="position:absolute;inset:0;width:100%;height:100%;border-radius:0;box-shadow:none;transition:none;--sw:' + D + 'px;--sh:' + H + 'px;--sc:' + c.bg + ';--ink:' + c.ink + '">' + spineHTML(it) + '</div></div>' +
+    (b3 ? '<div class="f" style="left:' + ((W - D) / 2) + 'px;top:0;width:' + D + 'px;height:' + H + 'px;transform:rotateY(-90deg) translateZ(' + (W / 2) + 'px)"><div class="lib3d" style="position:absolute;inset:0;padding:0"><div class="bk" style="' + el.getAttribute('style').replace(/transform:[^;]*;?/, '').replace(/--w:[^;]*/, '--w:' + D + 'px').replace(/--h:[^;]*/, '--h:' + H + 'px').replace(/--d:[^;]*/, '--d:0px') + '"><div class="f sp" style="transform:none">' + (el.querySelector('.sp') || {}).innerHTML + '</div></div></div></div>' +
+      '<div class="f" style="left:0;top:' + ((H - D) / 2) + 'px;width:' + W + 'px;height:' + D + 'px;transform:rotateX(90deg) translateZ(' + (H / 2) + 'px);background:repeating-linear-gradient(90deg,#DCC594 0 2px,#BFA36C 2px 3px)"></div>' : '') +
+    '<div class="f"' + (b3 ? ' hidden' : '') + ' style="left:' + ((W - D) / 2) + 'px;top:0;width:' + D + 'px;height:' + H + 'px;transform:rotateY(-90deg) translateZ(' + (W / 2) + 'px)"><div class="lsp" style="position:absolute;inset:0;width:100%;height:100%;border-radius:0;box-shadow:none;transition:none;--sw:' + D + 'px;--sh:' + H + 'px;--sc:' + c.bg + ';--ink:' + c.ink + '">' + spineHTML(it) + '</div></div>' +
     '<div class="f edge" style="left:' + ((W - D) / 2) + 'px;top:0;width:' + D + 'px;height:' + H + 'px;transform:rotateY(90deg) translateZ(' + (W / 2) + 'px)"></div>' +
     '<div class="f back" style="transform:rotateY(180deg) translateZ(' + (D / 2) + 'px)"></div></div></div><div class="ldet" id="ldet" role="dialog" aria-label="' + esc(label(it)) + '"></div>';
   app.appendChild(ov);
-  LP = { el: el, it: it, mag: $('#lmag'), scrim: $('.lscrim', ov), lit: $('#lmag .lit'), W: W, H: H, s0: sh / H, cx: cx, cy: cy, pull: sh * .55,
+  LP = { b3: b3, el: el, it: it, mag: $('#lmag'), scrim: $('.lscrim', ov), lit: $('#lmag .lit'), W: W, H: H, s0: sh / H, cx: cx, cy: cy, pull: sh * .55,
     tx: app.offsetWidth / 2, ty: 64 + H / 2 + 8, t: 0, started: Date.now() };
+  if (b3) LP.mag.style.transformOrigin = '50% 50%';
   var startT = dragged ? Math.min(.3, .32 * Math.min(1, dragUp / LP.pull)) : 0;
   lpFrame(startT);
   el.classList.add('gone'); el.style.transition = 'none'; el.style.transform = '';
