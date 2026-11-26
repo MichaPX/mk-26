@@ -1108,7 +1108,7 @@ body.full .sheet{padding-bottom:calc(28px + env(safe-area-inset-bottom))}
 /* ================= Grundlagen ================= */
 var MONTHS = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
 var STEP = 186;
-var APP_BUILD = '26.11.2026 13:26';
+var APP_BUILD = '26.11.2026 13:33';
 var ZOOM = 1;
 var NOW = new Date();
 var app = document.getElementById('app');
@@ -2461,14 +2461,14 @@ function pullOut(el, dragged) {
   var m = /translateY\((-?[\d.]+)px\)/.exec(el.style.transform || ''); if (m) dragUp = -Number(m[1]);
   var sw = cur.width / z, sh = cur.height / z, cx = (cur.left - sr.left) / z + sw / 2, cy = (cur.top - sr.top) / z + sh / 2 + dragUp;
   var ar = it.aspect || 1.33, W = Math.min(app.offsetWidth * 0.48, 200), H = W * ar, D = b3 ? Math.max(18, Math.min(52, (parseFloat(el.style.getPropertyValue('--w')) || 30) * H / (parseFloat(el.style.getPropertyValue('--h')) || 200))) : Math.max(sw, 10);
-  var c = spineCol(it);
+  var c = spineCol(it), fs = el.classList.contains('fsp');
   var ov = document.createElement('div'); ov.className = 'lovl on'; ov.id = 'lovl'; ov.style.pointerEvents = 'none';
   setTimeout(function () { ov.style.pointerEvents = ''; }, 550);
   ov.innerHTML = '<div class="lscrim" data-act="putback" style="opacity:0"></div><div class="l3d" id="l3d"><div class="lmag" id="lmag" style="width:' + W + 'px;height:' + H + 'px">' +
     '<div class="f front" style="background-image:url(\'' + cover(it) + '\');transform:translateZ(' + (D / 2) + 'px)"><i class="lit"></i></div>' +
     (b3 ? '<div class="f" style="left:' + ((W - D) / 2) + 'px;top:0;width:' + D + 'px;height:' + H + 'px;transform:rotateY(-90deg) translateZ(' + (W / 2) + 'px)"><div class="lib3d" style="position:absolute;inset:0;padding:0"><div class="' + el.className.replace(/\b(out|gone|unread)\b/g, '') + '" style="' + el.getAttribute('style').replace(/transform:[^;]*;?/, '').replace(/--w:[^;]*/, '--w:' + D + 'px').replace(/--h:[^;]*/, '--h:' + H + 'px').replace(/--d:[^;]*/, '--d:0px') + '"><div class="f sp" style="transform:none">' + (el.querySelector('.sp') || {}).innerHTML + '</div></div></div></div>' +
       '<div class="f" style="left:0;top:' + ((H - D) / 2) + 'px;width:' + W + 'px;height:' + D + 'px;transform:rotateX(90deg) translateZ(' + (H / 2) + 'px);background:repeating-linear-gradient(90deg,#DCC594 0 2px,#BFA36C 2px 3px)"></div>' : '') +
-    '<div class="f"' + (b3 ? ' hidden' : '') + ' style="left:' + ((W - D) / 2) + 'px;top:0;width:' + D + 'px;height:' + H + 'px;transform:rotateY(-90deg) translateZ(' + (W / 2) + 'px)"><div class="lsp" style="position:absolute;inset:0;width:100%;height:100%;border-radius:0;box-shadow:none;transition:none;--sw:' + D + 'px;--sh:' + H + 'px;--sc:' + c.bg + ';--ink:' + c.ink + '">' + spineHTML(it) + '</div></div>' +
+    '<div class="f"' + (b3 ? ' hidden' : '') + ' style="left:' + ((W - D) / 2) + 'px;top:0;width:' + D + 'px;height:' + H + 'px;transform:rotateY(-90deg) translateZ(' + (W / 2) + 'px)"><div class="lsp" style="position:absolute;inset:0;width:100%;height:100%;border-radius:0;box-shadow:none;transition:none;--sw:' + D + 'px;--sh:' + H + 'px;--sc:' + c.bg + ';--ink:' + c.ink + '">' + (fs ? '<div class="' + el.className.replace(/\b(out|gone)\b/g, '') + '" style="' + el.getAttribute('style').replace(/--w:[^;]*/, '--w:' + D + 'px').replace(/(^|;)\s*width:[^;]*/, '$1width:100%').replace(/(^|;)\s*height:[^;]*/, '$1height:100%').replace(/transform:[^;]*;?/, '') + ';position:absolute;inset:0;margin:0;transform:none;box-shadow:none;transition:none">' + el.innerHTML + '</div>' : spineHTML(it)) + '</div></div>' +
     '<div class="f edge" style="left:' + ((W - D) / 2) + 'px;top:0;width:' + D + 'px;height:' + H + 'px;transform:rotateY(90deg) translateZ(' + (W / 2) + 'px)"></div>' +
     '<div class="f back" style="transform:rotateY(180deg) translateZ(' + (D / 2) + 'px)"></div></div></div><div class="ldet" id="ldet" role="dialog" aria-label="' + esc(label(it)) + '"></div>';
   app.appendChild(ov);
