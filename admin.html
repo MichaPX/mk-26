@@ -190,6 +190,24 @@ body.full input,body.full textarea,body.full select{font-size:16px!important}
 .empty h2{margin:0;font-size:20px;font-weight:750}
 .empty p{margin:0;font-size:14px;line-height:1.5;color:var(--muted)}
 /* ---------- Bibliothek: Regal ---------- */
+.lcar{flex:1;min-height:0;display:flex;flex-direction:column;padding-bottom:10px}
+.lcsc{flex:1;min-height:200px;display:flex;align-items:center;gap:10px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:12px 0}
+.lcsc::-webkit-scrollbar{display:none}
+.lcsc.drag{scroll-snap-type:none;cursor:grabbing}
+.lcsp{flex:none;height:1px}
+.lccd{position:relative;flex:none;scroll-snap-align:center;padding:0;border-radius:4px;overflow:visible;transform-origin:50% 50%;-webkit-tap-highlight-color:transparent}
+.lccd img{display:block;width:100%;height:100%;object-fit:cover;border-radius:4px;box-shadow:0 14px 30px rgba(0,0,0,.32),0 2px 6px rgba(0,0,0,.2);pointer-events:none}
+.lccd i{position:absolute;top:8px;right:8px;width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px #fff;display:none}
+.lccd.unread i{display:block}
+.lcnum{text-align:center;font-size:12px;font-weight:650;color:var(--muted);margin:2px 0 6px}
+.lcinfo{padding:0 20px;text-align:center;min-height:118px}
+.lcinfo .k{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.lcinfo h2{margin:3px 0 2px;font-size:19px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lcinfo p{margin:0 0 10px;font-size:13px;color:var(--muted)}
+.lcinfo .acts{display:flex;gap:8px;justify-content:center}
+.lcinfo .acts button{height:40px;padding:0 14px;border-radius:20px;background:var(--chip);font-size:13.5px;font-weight:650;display:flex;align-items:center;gap:6px}
+.lcinfo .acts button svg{width:17px;height:17px}
+.lcinfo .acts .pri{background:var(--accent);color:#fff}
 .lsw{display:flex;gap:2px;padding:2px;border-radius:9px;background:var(--chip)}
 .lgsel{margin-left:auto;display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted)}
 .lgsel select{appearance:none;-webkit-appearance:none;height:28px;padding:0 22px 0 10px;border-radius:14px;border:0;background:var(--chip) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23999' stroke-width='1.6'/%3E%3C/svg%3E") no-repeat right 8px center;color:var(--text);font:inherit;font-size:12.5px!important;font-weight:650}
@@ -1111,7 +1129,7 @@ var PDF_WORKER_B64 = "LyoqCiAqIEBsaWNzdGFydCBUaGUgZm9sbG93aW5nIGlzIHRoZSBlbnRpcm
 /* ================= Grundlagen ================= */
 var MONTHS = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
 var STEP = 186;
-var APP_BUILD = '26.11.2026 13:33';
+var APP_BUILD = '26.11.2026 14:07';
 var ZOOM = 1;
 var NOW = new Date();
 var app = document.getElementById('app');
@@ -1350,7 +1368,7 @@ function magById(id) { for (var i = 0; i < S.mags.length; i++) if (S.mags[i].id 
 function issueById(id) { for (var i = 0; i < S.issues.length; i++) if (S.issues[i].id === id) return S.issues[i]; return null; }
 function issuesOf(magId, year) {
   return S.issues.filter(function (i) { return i.magId === magId && (year == null || i.year === year); })
-    .sort(function (a, b) { return b.year - a.year || b.month - a.month; });
+    .sort(function (a, b) { return b.year - a.year || b.month - a.month || (b.added || 0) - (a.added || 0); });
 }
 function yearsOf(magId) {
   var ys = [];
@@ -1666,6 +1684,7 @@ function render() {
   LP = null;
   if (S.screen === 'library' && S.libView === 'kiosk') bind3d();
   if (S.screen === 'library' && S.libView === 'shelf') bindFlat();
+  if (S.screen === 'library' && S.libView === 'car') bindLibCar();
   var gs = $('[data-groupsel]'); if (gs) gs.addEventListener('change', function () { ACT.libgroup(gs.value); });
   app.classList.remove('scrolled');
   var kp = $('#kpage'); if (kp && (S.screen === 'library' || S.screen === 'kiosk')) { var sc = function () { app.classList.toggle('scrolled', kp.scrollTop > 8); }; kp.addEventListener('scroll', sc, { passive: true }); sc(); }
@@ -2072,7 +2091,7 @@ function lib3dRegalHTML(lib) {
   else if (F !== 'all') { books = books.filter(function (it) { return genreOf(it) === F; }); comics = []; }
   // EIN Regal: Bücher und Comics stehen gemischt nebeneinander (Comics als schmale, hohe Hefte zwischen den Büchern)
   var ser = [], bySer = {};
-  comics.slice().sort(function (a, b) { return (a.year - b.year) || (a.month - b.month); }).forEach(function (it) { if (!bySer[it.magId]) { bySer[it.magId] = []; ser.push(bySer[it.magId]); } bySer[it.magId].push(it); });
+  comics.slice().sort(function (a, b) { return (a.year - b.year) || (a.month - b.month) || (a.added || 0) - (b.added || 0); }).forEach(function (it) { if (!bySer[it.magId]) { bySer[it.magId] = []; ser.push(bySer[it.magId]); } bySer[it.magId].push(it); });
   var all = [], gap = ser.length ? Math.max(1, Math.round(books.length / (ser.length + 1))) : 0, si = 0;   // Comic-Reihen gleichmäßig zwischen die Bücher stellen
   books.forEach(function (it, i) { all.push(it); if (gap && (i + 1) % gap === 0 && si < ser.length) all = all.concat(ser[si++]); });
   while (si < ser.length) all = all.concat(ser[si++]);
@@ -2101,7 +2120,7 @@ function lib3dRegalHTML(lib) {
   return { html: h + '</div>', keys: keys };
 }
 function lib3dKioskHTML(lib) {
-  var list = lib.slice().sort(function (a, b) { return (b.year - a.year) || (b.month - a.month); }), W = lib3dW() - 30, tab = document.body.classList.contains('tablet');
+  var list = lib.slice().sort(function (a, b) { return (b.year - a.year) || (b.month - a.month) || (b.added || 0) - (a.added || 0); }), W = lib3dW() - 30, tab = document.body.classList.contains('tablet');
   var per = tab ? Math.max(6, Math.floor(W / 110)) : 5, mw = tab ? 104 : 80, mh = Math.round(mw * 1.4), TH = Math.round(mh * 0.47), step = (W - mw) / Math.max(1, per - 1);
   var tiers = []; for (var i = 0; i < list.length; i += per) tiers.push(list.slice(i, i + per));
   var nT = tiers.length, h = '<div class="lib3d"><div class="lab3d">Zeitschriften <span>' + list.length + '</span></div><div class="k3scene"><div class="k3" style="height:' + (mh + TH * Math.max(0, nT - 1) + 24) + 'px">';
@@ -2154,7 +2173,7 @@ function libFlatRegalHTML(lib) {
   else if (F !== 'all') { books = books.filter(function (it) { return genreOf(it) === F; }); comics = []; }
   // Comic-Reihen (älteste → neueste), vorne steht das zuletzt gewählte oder neueste Heft
   var ser = [], by = {}, front = shelfSt().cfront || {};
-  comics.slice().sort(function (a, b) { return (a.year - b.year) || (a.month - b.month); }).forEach(function (it) { if (!by[it.magId]) { by[it.magId] = []; ser.push(it.magId); } by[it.magId].push(it); });
+  comics.slice().sort(function (a, b) { return (a.year - b.year) || (a.month - b.month) || (a.added || 0) - (b.added || 0); }).forEach(function (it) { if (!by[it.magId]) { by[it.magId] = []; ser.push(it.magId); } by[it.magId].push(it); });
   CSER = {};
   ser.forEach(function (id) {
     var l = by[id].slice().reverse(), ord = l.map(function (x, i) { return i; }), fi = l.findIndex(function (x) { return x.id === front[id]; });
@@ -2268,7 +2287,7 @@ function libShelfHTML(lib) {
   var maxW = Math.max(200, (window.innerWidth > 600 && !IS_ADMIN ? window.innerWidth : (IS_ADMIN && S.preview === 'ipad' ? 820 : 390)) - 32 - 26);
   keys.forEach(function (k, gi) {
     var list = groups[k];
-    list.sort(function (a, b) { return G === 'year' ? (String(a.magId).localeCompare(String(b.magId)) || b.month - a.month) : (b.year - a.year || b.month - a.month); });
+    list.sort(function (a, b) { return G === 'year' ? (String(a.magId).localeCompare(String(b.magId)) || b.month - a.month) : (b.year - a.year || b.month - a.month || (b.added || 0) - (a.added || 0)); });
     var rows = [[]], w = 0;
     list.forEach(function (it) { var pc = it.totalPages || it.pageCount || 100, kd = kindOf(it);
       // Buch: dick und kleiner · Comic: groß und dünn · Heft wie bisher
@@ -2304,7 +2323,7 @@ function libBarHTML(lib, keys) {
   return libBarRest(h, vsw, keys, G);
 }
 function vswHTML() {
-  return '<div class="lsw" role="radiogroup" aria-label="Ansicht">' + [['grid', 'Raster'], ['shelf', 'Regal'], ['kiosk', 'Kiosk']].map(function (v) { return '<button class="bare' + ((S.libView || 'grid') === v[0] ? ' on' : '') + '" data-act="libview" data-arg="' + v[0] + '">' + v[1] + '</button>'; }).join('') + '</div>';
+  return '<div class="lsw" role="radiogroup" aria-label="Ansicht">' + [['grid', 'Raster'], ['shelf', 'Regal'], ['kiosk', 'Kiosk'], ['car', 'Karussell']].map(function (v) { return '<button class="bare' + ((S.libView || 'grid') === v[0] ? ' on' : '') + '" data-act="libview" data-arg="' + v[0] + '">' + v[1] + '</button>'; }).join('') + '</div>';
 }
 function libBarRest(h, vsw, keys, G) {
   var spatial = S.libView === 'rack';   // 3D-Regal gruppiert selbst (Genre / Comics)
@@ -2531,7 +2550,7 @@ function libRackHTML(lib, K) {   // K = Kiosk-Modus: alle Hefte ohne Filter auf 
   var z = 1;
   keys.forEach(function (k, gi) {
     var list = groups[k];
-    list.sort(function (a, b) { return b.year - a.year || b.month - a.month; });
+    list.sort(function (a, b) { return b.year - a.year || b.month - a.month || (b.added || 0) - (a.added || 0); });
     if (!K) h += '<div class="glab" id="lg' + gi + '">' + esc(k) + ' <span>· ' + list.length + (list.length === 1 ? ' Heft' : ' Hefte') + '</span></div>';
     var rows = []; for (var r = 0; r < list.length; r += per) rows.push(list.slice(r, r + per));
     // 1) automatische Platzierung: tf = Reihe von vorne (0 = vorderste)
@@ -2643,8 +2662,83 @@ function rackBack(after) {
   var done = false; a.onfinish = function () { if (!done) { done = true; finish(); } };
   setTimeout(function () { if (!done) { done = true; finish(); } }, 1100);
 }
+/* ===== Bibliothek als Karussell: alle gekauften Titel ===== */
+var LC = { idx: {} };
+function lcKey() { return (S.libFilter || 'all'); }
+function lcInfoHTML(it) {
+  if (!it) return '';
+  var m = magById(it.magId) || {}, k = kindOf(it), full = owns(it), mk = marksOf(it);
+  var kn = k === 'book' ? (genreOf(it) || 'Buch') : k === 'comic' ? 'Comic · ' + esc(m.name || '') : esc(m.name || '');
+  return '<div class="k">' + kn + '</div><h2>' + (k === 'book' ? esc(it.title || m.name || '') : label(it)) + '</h2>' +
+    '<p>' + (full ? (it.totalPages || it.pageCount) + ' Seiten' : 'Leseprobe') + ' · ' + (isReadIt(it) ? 'Gelesen' : 'Ungelesen') + (mk.length ? ' · Lesezeichen S. ' + mk[mk.length - 1] : '') + '</p>' +
+    '<div class="acts"><button class="bare pri" data-act="lcgo" data-arg="' + (mk.length && full ? 'mark:' + mk[mk.length - 1] : 'read') + '">' + ICON.flipic + (mk.length && full ? 'Weiterlesen' : 'Lesen') + '</button>' +
+    '<button class="bare" data-act="lcgo" data-arg="vorlesen">' + ICON.speak + 'Vorlesen</button>' +
+    '<button class="bare" data-act="libitem" data-arg="' + esc(it.id) + '">Mehr</button></div>';
+}
+function libCarHTML(list) {
+  if (!list.length) return '<div class="lempty">Hier ist nichts.</div>';
+  var i = Math.max(0, Math.min(list.length - 1, LC.idx[lcKey()] || 0));
+  return '<div class="lcar"><div class="lcsc" id="lcsc"><i class="lcsp"></i>' + list.map(function (it, n) {
+    return '<button class="bare lccd' + (isReadIt(it) ? '' : ' unread') + '" data-lc="' + n + '" data-id="' + esc(it.id) + '" style="--ar:' + (it.aspect || 1.33) + '" aria-label="' + esc(label(it)) + '"><img src="' + cover(it) + '" alt="" draggable="false"><i></i></button>';
+  }).join('') + '<i class="lcsp"></i></div><div class="lcnum" id="lcnum">' + (i + 1) + ' / ' + list.length + '</div><div class="lcinfo" id="lcinfo">' + lcInfoHTML(list[i]) + '</div></div>';
+}
+function bindLibCar() {
+  var sc = $('#lcsc'); if (!sc) return;
+  var cards = $$('.lccd', sc), raf = 0, cur = -1;
+  var fit = function () {
+    var tab = document.body.classList.contains('tablet'), h = Math.max(150, Math.min(tab ? 520 : 380, sc.clientHeight - 24, sc.clientWidth * (tab ? .5 : .62) * 1.33));
+    cards.forEach(function (c) { var w = Math.round(h / parseFloat(c.style.getPropertyValue('--ar'))); c.style.height = h + 'px'; c.style.width = w + 'px'; });
+    var sp = $$('.lcsp', sc);
+    if (cards.length) { sp[0].style.flexBasis = Math.max(0, (sc.clientWidth - cards[0].offsetWidth) / 2) + 'px'; sp[1].style.flexBasis = Math.max(0, (sc.clientWidth - cards[cards.length - 1].offsetWidth) / 2) + 'px'; }
+  };
+  var center = function (c) { return c.offsetLeft + c.offsetWidth / 2 - sc.clientWidth / 2; };
+  var upd = function () {
+    raf = 0;
+    var x = sc.scrollLeft, best = 0, bd = 1e9;
+    cards.forEach(function (c, n) {
+      var d = center(c) - x, off = d / (c.offsetWidth + 10), cl = Math.max(-1.5, Math.min(1.5, off)), a = Math.min(Math.abs(off), 1);
+      c.style.transform = 'perspective(900px) rotateY(' + (-cl * 24).toFixed(1) + 'deg) scale(' + (1 - a * 0.16).toFixed(3) + ')';
+      c.style.opacity = (1 - Math.min(Math.abs(off), 2) * 0.28).toFixed(2); c.style.zIndex = 100 - Math.round(Math.abs(off) * 10);
+      if (Math.abs(d) < bd) { bd = Math.abs(d); best = n; }
+    });
+    if (best !== cur) {
+      cur = best; LC.idx[lcKey()] = best;
+      var it = issueById(cards[best].getAttribute('data-id')), inf = $('#lcinfo'), nm = $('#lcnum');
+      if (inf) inf.innerHTML = lcInfoHTML(it); if (nm) nm.textContent = (best + 1) + ' / ' + cards.length;
+      cards.forEach(function (c, n) { c.classList.toggle('on', n === best); });
+    }
+  };
+  fit();
+  var i0 = Math.max(0, Math.min(cards.length - 1, LC.idx[lcKey()] || 0));
+  if (cards[i0]) sc.scrollLeft = center(cards[i0]);
+  upd();
+  sc.addEventListener('scroll', function () { if (!raf) raf = requestAnimationFrame(upd); }, { passive: true });
+  cards.forEach(function (c, n) {
+    c.addEventListener('click', function () {
+      if (sc.dataset.dragged) return;
+      if (n !== cur) sc.scrollTo({ left: center(c), behavior: 'smooth' });
+      else ACT.lcgo('read');
+    });
+  });
+  // Maus: ziehen wie mit dem Finger
+  sc.addEventListener('pointerdown', function (e) {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    e.preventDefault();
+    var x0 = e.clientX, l0 = sc.scrollLeft, mv = 0; sc.classList.add('drag');
+    var move = function (ev) { var dx = (ev.clientX - x0) / ZOOM; mv = Math.max(mv, Math.abs(dx)); sc.scrollLeft = l0 - dx; };
+    var up = function (ev) {
+      window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); sc.classList.remove('drag');
+      var dx = (ev.clientX - x0) / ZOOM, t = cur;
+      if (Math.abs(dx) > 40 && Math.abs(center(cards[cur]) - l0) < 4) t = Math.max(0, Math.min(cards.length - 1, cur + (dx < 0 ? 1 : -1)));
+      sc.scrollTo({ left: center(cards[t]), behavior: 'smooth' });
+      if (mv > 6) { sc.dataset.dragged = '1'; setTimeout(function () { delete sc.dataset.dragged; }, 60); }
+    };
+    window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
+  });
+  if (window.ResizeObserver) { var ro = new ResizeObserver(function () { if (!document.body.contains(sc)) { ro.disconnect(); return; } var k = cur; fit(); if (cards[k]) sc.scrollLeft = center(cards[k]); cur = -1; upd(); }); ro.observe(sc); }
+}
 function libraryHTML() {
-  var lib = S.issues.filter(inLib).sort(function (a, b) { return b.year - a.year || b.month - a.month; });
+  var lib = S.issues.filter(inLib).sort(function (a, b) { return b.year - a.year || b.month - a.month || (b.added || 0) - (a.added || 0); });
   var h = '<div class="page noscroll" id="kpage" style="animation:fade .25s ease">';
   h += header('Bibliothek', lib.length === 1 ? '1 Ausgabe' : lib.length + ' Ausgaben');
   S.libView = S.libView || 'grid'; if (S.libView === 'rack') S.libView = 'kiosk';   // Ständer und Kiosk zusammengelegt S.libGroup = S.libGroup || S.settings.libGroup || 'year';
@@ -2652,6 +2746,7 @@ function libraryHTML() {
     // Regal = Bücher & Comics, Ständer/Kiosk = Zeitschriften, Raster = alles
     var vl = S.libView === 'shelf' ? lib.filter(isBookish) : (S.libView === 'rack' || S.libView === 'kiosk') ? lib.filter(function (it) { return !isBookish(it); }) : lib;
     if (vl !== lib && !vl.length) return h + libBarHTML(vl, []) + '<div class="lempty">' + (S.libView === 'shelf' ? 'Im Regal stehen deine Bücher und Comics.<br>Du hast noch keine.' : 'Im Kiosk stehen deine Zeitschriften.<br>Du hast noch keine.') + '</div></div>';
+    if (S.libView === 'car') { h += libBarHTML(lib, null); return h + libCarHTML(lib.filter(libMatch)) + '</div>'; }
     var sh = S.libView === 'shelf' ? libFlatRegalHTML(vl) : S.libView === 'kiosk' ? lib3dKioskHTML(vl) : null;
     h += libBarHTML(vl, sh && sh.keys);
     if (sh) return h + sh.html + '</div>';
@@ -4768,6 +4863,7 @@ var ACT = {
     if (what === 'remove') { putBack(function () { S.saved = S.saved.filter(function (x) { return x !== id; }); savePrefs(); toast('Aus der Bibliothek entfernt'); rerender(); }); return; }
     closeLibPull(); S.sheetIssue = id; ACT.libgo(what);
   },
+  lcgo: function (what) { var c = $('.lccd.on'); if (!c) return; S.sheetIssue = c.getAttribute('data-id'); ACT.libgo(what); },
   libitem: function (id) { S.sheet = 'lib'; S.sheetIssue = id; S.anim = true; rerender(); },
   libgo: function (what) {
     var id = S.sheetIssue, it = issueById(id), pv = !owns(it);
@@ -6056,6 +6152,8 @@ async function processUpload() {
     if (!twin && U.newLogo) { mag.logo = U.newLogo; mag.logoAspect = U.newLogoAspect || 1; mag.logoBg = U.newLogoBg || '#FFFFFF'; }
   } else mag = (S.allMags || S.mags).filter(function (x) { return x.id === selV; })[0];
   var issueId = bookTitle ? 'buch-' + slug(bookTitle) : mag.id + '-' + year + '-' + pad(month);
+  // Comics: mehrere Hefte einer Reihe im selben Monat sind normal → nie ersetzen, sondern als weiteres Heft anlegen
+  if (!bookTitle && (mag.kind || 'mag') === 'comic' && issueById(issueId)) { var base = issueId, n3 = 2; while (issueById(issueId)) issueId = base + '-' + n3++; }
   if (issueById(issueId) && !confirm('Diese Ausgabe (' + (bookTitle || mag.name + ' · ' + MONTHS[month - 1] + ' ' + year) + ') gibt es schon. Ersetzen?')) return;
 
   U.busy = true;
