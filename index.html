@@ -599,8 +599,8 @@ body:not(.tablet) .cta .roundbtn,body:not(.tablet) .cta .savebtn{width:40px;heig
 .cstk u.come{animation:ccome .45s cubic-bezier(.3,.8,.25,1)}
 @keyframes ccome{from{transform:translate(14px,-8px) scale(.96)}}
 .cstk .n{position:absolute;right:-6px;top:-8px;z-index:5;min-width:22px;height:22px;padding:0 6px;border-radius:11px;background:var(--accent);color:var(--onaccent,#fff);font:800 11px -apple-system,Arial;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.4);transform:rotate(4deg);white-space:nowrap}
-.cstk .sw{position:absolute;left:50%;bottom:-14px;transform:translateX(-50%) rotate(4deg);z-index:6;width:34px;height:34px;border-radius:17px;background:rgba(20,20,24,.85);color:#fff;display:grid;place-items:center;box-shadow:0 3px 10px rgba(0,0,0,.45);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
-.cstk .sw svg{width:18px;height:18px}
+.cstk .cswb{position:absolute;left:50%;bottom:-14px;transform:translateX(-50%) rotate(4deg);z-index:6;width:34px;height:34px;border-radius:17px;background:#1d1e22;color:#fff;display:grid;place-items:center;box-shadow:0 3px 10px rgba(0,0,0,.45)}
+.cstk .cswb svg{width:18px;height:18px}.cstk .cswb svg,.cstk .cswb svg *{fill:none!important;stroke:#fff!important;background:none!important}
 .cpick{position:absolute;inset:0;z-index:300;background:rgba(0,0,0,.55);display:flex;flex-direction:column;justify-content:flex-end;animation:fade .2s}
 .cpickp{background:var(--surf);color:var(--text);border-radius:22px 22px 0 0;padding:6px 0 max(24px,env(safe-area-inset-bottom));animation:rtocup .3s cubic-bezier(.2,.8,.25,1)}
 .cpickp h3{margin:10px 20px 2px;font-size:19px}.cpickp small{margin:0 20px;color:var(--muted);font-size:13px}
@@ -609,6 +609,13 @@ body:not(.tablet) .cta .roundbtn,body:not(.tablet) .cta .savebtn{width:40px;heig
 .cprow img{width:118px;height:172px;object-fit:cover;border-radius:4px;box-shadow:0 8px 18px rgba(0,0,0,.4);display:block}
 .cprow b{display:block;font-size:13px;margin-top:8px}.cprow span{font-size:11.5px;color:var(--muted)}
 .cprow button.on img{outline:3px solid var(--accent);outline-offset:2px}
+.fcase.edit [data-key]{touch-action:none;cursor:grab;animation:zwig 2.4s ease-in-out infinite}
+.fcase.edit [data-key]:nth-child(2n){animation-delay:-1.2s}
+.fcase.edit .fach{overflow:visible}
+.fhole{opacity:.25;filter:grayscale(1);outline:2px dashed var(--accent);outline-offset:1px;animation:none!important}
+.fghost{transform:rotate(-3deg) scale(1.06)!important;box-shadow:0 18px 36px rgba(0,0,0,.45)!important;opacity:.96;animation:none!important}
+.fedit{position:relative;z-index:30;margin:8px 12px 0;padding:10px 12px;border-radius:16px;background:var(--card,var(--surf));box-shadow:0 8px 24px rgba(0,0,0,.18);display:flex;flex-direction:column;gap:8px;align-items:center;font-size:12.5px;color:var(--muted)}
+.fedit div{display:flex;gap:8px}.fedit .btn{height:38px;padding:0 18px;flex:none}
 .lfly{position:absolute;left:0;top:0;transform-origin:0 0;border-radius:2px 5px 5px 2px;background-size:cover;background-position:center;box-shadow:0 26px 50px rgba(0,0,0,.45);will-change:transform}
 .lfly::after{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(90deg,rgba(0,0,0,.3),rgba(255,255,255,.12) 3%,rgba(255,255,255,0) 8%)}
 .lovl{position:absolute;inset:0;z-index:60;pointer-events:none}
@@ -1101,7 +1108,7 @@ body.full .sheet{padding-bottom:calc(28px + env(safe-area-inset-bottom))}
 /* ================= Grundlagen ================= */
 var MONTHS = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
 var STEP = 186;
-var APP_BUILD = '26.11.2026 13:15';
+var APP_BUILD = '26.11.2026 13:26';
 var ZOOM = 1;
 var NOW = new Date();
 var app = document.getElementById('app');
@@ -2126,13 +2133,13 @@ var CSER = {};
 function flatSpine(it, tab) {
   var m = magById(it.magId) || {}, k = hash3(it.id), pc = it.totalPages || it.pageCount || 200;
   var w = Math.max(18, Math.min(38, Math.round(14 + pc / 26))), ht = Math.round((tab ? 178 : 150) + k % (tab ? 40 : 34)), title = it.title || m.name || '';
-  return { w: w, html: '<button class="fsp' + (k % 3 === 0 ? ' serif' : '') + (isReadIt(it) ? '' : ' unread') + '" data-fsp="' + esc(it.id) + '" aria-label="' + esc(title) + '" style="--w:' + w + 'px;width:' + w + 'px;height:' + ht + 'px;background-image:url(\'' + cover(it) + '\');--bp:' + (k % 100) + '%;--lab:rgba(0,0,0,' + (0.25 + (k % 4) * .1) + ')"><b><span>' + esc(title) + '</span></b><i></i></button>' };
+  return { w: w, html: '<button data-key="' + esc(it.id) + '" class="fsp' + (k % 3 === 0 ? ' serif' : '') + (isReadIt(it) ? '' : ' unread') + '" data-fsp="' + esc(it.id) + '" aria-label="' + esc(title) + '" style="--w:' + w + 'px;width:' + w + 'px;height:' + ht + 'px;background-image:url(\'' + cover(it) + '\');--bp:' + (k % 100) + '%;--lab:rgba(0,0,0,' + (0.25 + (k % 4) * .1) + ')"><b><span>' + esc(title) + '</span></b><i></i></button>' };
 }
 function cstackHTML(id) {
   var o = CSER[id], vis = o.ord.slice(0, 5), st = '';
   for (var q = vis.length - 1; q >= 0; q--) { var it = o.list[vis[q]]; st += '<u' + (q === 0 ? ' class="front" data-rack="' + esc(it.id) + '"' : '') + ' style="transform:translate(' + (q * 4) + 'px,' + (-q * 2.5) + 'px);background-image:url(\'' + cover(it) + '\')"></u>'; }
   var f = o.list[o.ord[0]];
-  return st + '<span class="n">#' + (o.list.length - o.ord[0]) + '</span>' + (o.list.length > 1 ? '<span class="sw" role="button" aria-label="Nächstes Heft nach vorn" data-csw="' + esc(id) + '">' + SWI + '</span>' : '');
+  return st + '<span class="n">#' + (o.list.length - o.ord[0]) + '</span>' + (o.list.length > 1 ? '<span class="cswb" role="button" aria-label="Nächstes Heft nach vorn" data-csw="' + esc(id) + '">' + SWI + '</span>' : '');
 }
 function libFlatRegalHTML(lib) {
   var list = lib.filter(libMatch), W = lib3dW() - 44, tab = document.body.classList.contains('tablet'), h = '<div class="lib3d">';
@@ -2155,16 +2162,25 @@ function libFlatRegalHTML(lib) {
   books.forEach(function (it, i) { items.push(it); if (gap && (i + 1) % gap === 0 && si < ser.length) items.push({ ser: ser[si++] }); });
   while (si < ser.length) items.push({ ser: ser[si++] });
   if (!items.length) return { html: h + '<div class="lempty">Im Regal stehen deine Bücher und Comics.</div></div>', keys: [] };
+  var key = function (o) { return o.ser ? 'ser:' + o.ser : o.id; }, ford = shelfSt().forder || [];
+  if (ford.length && F === 'all') {   // eigene Anordnung des Lesers; neue Titel bleiben an ihrer automatischen Stelle
+    var pos = {}; ford.forEach(function (k, i) { pos[k] = i; });
+    var known = items.filter(function (o) { return pos[key(o)] != null; }).sort(function (a, b) { return pos[key(a)] - pos[key(b)]; }), ki = 0;
+    items = items.map(function (o) { return pos[key(o)] != null ? known[ki++] : o; });
+  }
   var cw = tab ? 104 : 86, fach = '', used = 0, out = '';
   items.forEach(function (o) {
     var w, x;
-    if (o.ser) { w = cw + 22; x = '<div class="cstk" data-cser="' + esc(o.ser) + '" style="--cw:' + cw + 'px">' + cstackHTML(o.ser) + '</div>'; }
+    if (o.ser) { w = cw + 22; x = '<div class="cstk" data-key="ser:' + esc(o.ser) + '" data-cser="' + esc(o.ser) + '" style="--cw:' + cw + 'px">' + cstackHTML(o.ser) + '</div>'; }
     else { var f = flatSpine(o, tab); w = f.w; x = f.html; }
     if (used && used + w + 1 > W) { out += '<div class="fach">' + fach + '</div>'; fach = ''; used = 0; }
     fach += x; used += w + 1;
   });
   out += '<div class="fach">' + fach + '</div>';
-  return { html: h + '<div class="fcase">' + out + '</div></div>', keys: [] };
+  var bar = F !== 'all' ? '' : S.fedit
+    ? '<div class="fedit"><span>Ziehen zum Umstellen – rastet am Regal ein</span><div><button class="btn sbtn" data-fedit="reset">Zurücksetzen</button><button class="btn pbtn" data-fedit="done">Fertig</button></div></div>'
+    : '<div class="lhint" style="text-align:center"><button class="btn sbtn zarr" data-fedit="on">Regal selbst einräumen</button></div>';
+  return { html: h + (S.fedit ? bar : '') + '<div class="fcase' + (S.fedit ? ' edit' : '') + '">' + out + '</div>' + (S.fedit ? '' : bar) + '</div>', keys: [] };
 }
 function cPick(id) {
   var o = CSER[id]; if (!o) return; var m = magById(id) || {};
@@ -2182,7 +2198,45 @@ function cPick(id) {
   });
   ($('#app') || document.body).appendChild(d);
 }
+
+/* Regal selbst einräumen: Buch/Stapel ziehen, Platzhalter wandert magnetisch mit, beim Loslassen rastet es ein */
+function bindFlatDrag() {
+  var fc = $('.fcase.edit'); if (!fc) return;
+  $$('[data-key]', fc).forEach(function (el) {
+    el.addEventListener('pointerdown', function (e) {
+      e.preventDefault();
+      var r = el.getBoundingClientRect(), ox = e.clientX - r.left, oy = e.clientY - r.top, moved = false;
+      var ghost = el.cloneNode(true); ghost.classList.add('fghost'); ghost.style.cssText += ';position:fixed;left:' + r.left + 'px;top:' + r.top + 'px;width:' + r.width + 'px;height:' + r.height + 'px;margin:0;z-index:999;pointer-events:none';
+      var mv = function (ev) {
+        if (!moved) { if (Math.abs(ev.clientX - e.clientX) + Math.abs(ev.clientY - e.clientY) < 6) return; moved = true; document.body.appendChild(ghost); el.classList.add('fhole'); }
+        ghost.style.left = (ev.clientX - ox) + 'px'; ghost.style.top = (ev.clientY - oy) + 'px';
+        // Ziel-Fach: das Fach unter dem Finger (sonst das nächste)
+        var fs = $$('.fach', fc), tf = null, bd = 1e9;
+        fs.forEach(function (f) { var b = f.getBoundingClientRect(), d = ev.clientY < b.top ? b.top - ev.clientY : ev.clientY > b.bottom ? ev.clientY - b.bottom : 0; if (d < bd) { bd = d; tf = f; } });
+        if (!tf) return;
+        // Einfügestelle: vor dem ersten Element, dessen Mitte rechts vom Finger liegt
+        var kids = $$('[data-key]', tf).filter(function (k) { return k !== el; }), before = null;
+        for (var i = 0; i < kids.length; i++) { var kb = kids[i].getBoundingClientRect(); if (ev.clientX < kb.left + kb.width / 2) { before = kids[i]; break; } }
+        if (el.parentNode !== tf || el.nextElementSibling !== before) { tf.insertBefore(el, before); }
+      };
+      var up = function () {
+        document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); document.removeEventListener('pointercancel', up);
+        if (!moved) return;
+        var gb = ghost.getBoundingClientRect(), tb = el.getBoundingClientRect();
+        el.classList.remove('fhole');
+        // einrasten: Geist gleitet an den neuen Platz
+        if (ghost.animate) ghost.animate([{ left: gb.left + 'px', top: gb.top + 'px' }, { left: tb.left + 'px', top: tb.top + 'px' }], { duration: 180, easing: 'cubic-bezier(.3,.8,.3,1)' }).onfinish = function () { ghost.remove(); };
+        else ghost.remove();
+        var st = shelfSt(); st.forder = $$('[data-key]', fc).map(function (k) { return k.getAttribute('data-key'); }); savePrefs();
+        setTimeout(function () { rerender(); }, 200);
+      };
+      document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up); document.addEventListener('pointercancel', up);
+    });
+  });
+}
 function bindFlat() {
+  $$('[data-fedit]').forEach(function (b) { b.addEventListener('click', function () { var v = b.getAttribute('data-fedit'); if (v === 'on') S.fedit = true; else if (v === 'done') S.fedit = false; else { shelfSt().forder = []; savePrefs(); } rerender(); }); });
+  if (S.fedit) { bindFlatDrag(); return; }
   $$('[data-l3f]').forEach(function (b) { b.addEventListener('click', function () { S.l3dF = b.getAttribute('data-l3f'); rerender(); }); });
   $$('[data-fsp]').forEach(function (b) { b.addEventListener('click', function () { if (lpAlive()) return; b.setAttribute('data-spine', b.getAttribute('data-fsp')); pullOut(b, false); }); });
   $$('[data-cser]').forEach(function (el) {
@@ -4683,7 +4737,7 @@ var ACT = {
   },
   rackedit: function () { S.rackEdit = !S.rackEdit; render(); },
   rackreset: function () { shelfSt()[S.libView === 'kiosk' ? 'posK' : 'pos'] = {}; savePrefs(); render(); },
-  libview: function (v) { S.libView = v; S.rackEdit = false; render(); },   // bewusst nicht gespeichert: jeder App-Start beginnt mit dem Raster
+  libview: function (v) { S.libView = v; S.rackEdit = false; S.fedit = false; render(); },   // bewusst nicht gespeichert: jeder App-Start beginnt mit dem Raster
   libfilter: function (f) { S.libFilter = f; var sc = $('#kpage') ? $('#kpage').scrollTop : 0; render(); },
   libgroup: function (g) { S.libGroup = g; S.settings.libGroup = g; savePrefs(); render(); },
   libjump: function (i) { var sec = $('#lg' + i), pg = $('#kpage'), bar = $('.lbar'); if (sec && pg) pg.scrollTo({ top: sec.offsetTop - (bar ? bar.offsetHeight : 0) - 70, behavior: 'smooth' }); },
